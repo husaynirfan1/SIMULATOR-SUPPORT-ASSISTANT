@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morphik OS - CAE Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="brand">
+                <div style="font-size: 1.5rem; font-weight: 700;">Morphik OS</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">A Morphik +
+                    Langgraph system
+                    Network</div>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html" class="nav-item active">
+                        <span>📊</span>
+                        <span>Dashboard</span>
+                    </a></li>
+                <li><a href="agents.html" class="nav-item">
+                        <span>🤖</span>
+                        <span>Agents</span>
+                    </a></li>
+                <li><a href="graph-viz.html" class="nav-item">
+                        <span>🕸️</span>
+                        <span>Graph Viewer</span>
+                    </a></li>
+                <li><a href="#" class="nav-item">
+                        <span>⚙️</span>
+                        <span>Settings</span>
+                    </a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <header>
+                <h1>System Overview</h1>
+                <p style="color: var(--text-secondary);">Welcome to CAE Specialist Agent Network</p>
+            </header>
+
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <div style="font-size: 2rem;">🟢</div>
+                        <div>
+                            <h3>System Status</h3>
+                            <p>All systems operational</p>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="width: 8px; height: 8px; background-color: #22c55e; border-radius: 50%;"></span>
+                        <span style="font-size: 0.9rem; color: #22c55e; font-weight: 500;">Online</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <div style="font-size: 2rem;">🤖</div>
+                        <div>
+                            <h3>Active Agents</h3>
+                            <p>11 Specialists Deployed</p>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                            Planning • Interface • Motion • Vibration
+                        </div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                            Visual • Computer • Security • DR • Inventory
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <div style="font-size: 2rem;">🧠</div>
+                        <div>
+                            <h3>Knowledge Base</h3>
+                            <p>Graph Retrieval Enabled</p>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+                        <div
+                            style="padding: 0.5rem 0.75rem; background-color: rgba(59, 130, 246, 0.1); border-radius: 6px; font-size: 0.85rem; color: #3b82f6;">
+                            RAG Active
+                        </div>
+                        <div
+                            style="padding: 0.5rem 0.75rem; background-color: rgba(34, 197, 94, 0.1); border-radius: 6px; font-size: 0.85rem; color: #22c55e;">
+                            Graph Hop: 2
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 3rem;">
+                <h2 style="margin-bottom: 1rem;">Specialist Domains</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                    <div class="card"
+                        style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), transparent);">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🎯</div>
+                        <h3 style="font-size: 1rem;">Planning & Routing</h3>
+                        <p style="font-size: 0.85rem;">Query analysis and coordination</p>
+                    </div>
+
+                    <div class="card"
+                        style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), transparent);">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🎨</div>
+                        <h3 style="font-size: 1rem;">Interface Systems</h3>
+                        <p style="font-size: 0.85rem;">UI/UX and HMI expertise</p>
+                    </div>
+
+                    <div class="card"
+                        style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), transparent);">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚙️</div>
+                        <h3 style="font-size: 1rem;">Motion Control</h3>
+                        <p style="font-size: 0.85rem;">Actuators and kinematics</p>
+                    </div>
+
+                    <div class="card"
+                        style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), transparent);">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📊</div>
+                        <h3 style="font-size: 1rem;">Vibration Analysis</h3>
+                        <p style="font-size: 0.85rem;">Frequency and damping systems</p>
+                    </div>
+
+                    <div class="card"
+                        style="background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), transparent);">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🖼️</div>
+                        <h3 style="font-size: 1rem;">Visual Systems</h3>
+                        <p style="font-size: 0.85rem;">Display and graphics rendering</p>
+                    </div>
+
+                    <div class="card" style="background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), transparent);">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">💻</div>
+                        <h3 style="font-size: 1rem;">Computer Systems</h3>
+                        <p style="font-size: 0.85rem;">Hardware and networking</p>
+                    </div>
+
+                    <div class="card" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), transparent);">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔒</div>
+                        <h3 style="font-size: 1rem;">Security</h3>
+                        <p style="font-size: 0.85rem;">Threat analysis and protection</p>
+                    </div>
+
+                    <div class="card"
+                        style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.1), transparent);">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📋</div>
+                        <h3 style="font-size: 1rem;">Deficiency Tracking</h3>
+                        <p style="font-size: 0.85rem;">Issue and quality management</p>
+                    </div>
+
+                    <div class="card"
+                        style="background: linear-gradient(135deg, rgba(132, 204, 22, 0.1), transparent);">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📦</div>
+                        <h3 style="font-size: 1rem;">Inventory</h3>
+                        <p style="font-size: 0.85rem;">Parts and supply chain</p>
+                    </div>
+
+                    <div class="card"
+                        style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), transparent);">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📈</div>
+                        <h3 style="font-size: 1rem;">Visualization</h3>
+                        <p style="font-size: 0.85rem;">Diagrams and flowcharts</p>
+                    </div>
+
+                    <div class="card"
+                        style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), transparent);">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🧩</div>
+                        <h3 style="font-size: 1rem;">Synthesis</h3>
+                        <p style="font-size: 0.85rem;">Multi-agent integration</p>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                style="margin-top: 3rem; padding: 2rem; background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), transparent); border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.2);">
+                <h3 style="margin-bottom: 0.5rem;">🚀 Quick Start</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                    Navigate to <a href="agents.html" style="color: #3b82f6; font-weight: 500;">Agents</a> to manage
+                    knowledge bases and upload documents for each specialist.
+                </p>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <a href="agents.html" class="btn btn-primary" style="display: inline-block;">
+                        Manage Agents
+                    </a>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

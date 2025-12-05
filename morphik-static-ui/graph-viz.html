@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Visualization - Morphik OS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+    <script src="./js/api.js"></script>
+    <style>
+        #cy {
+            width: 100%;
+            height: calc(100vh - 280px);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--bg-secondary);
+        }
+
+        .graph-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .control-group select,
+        .control-group input {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .control-group select:focus,
+        .control-group input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            padding: 1rem;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), transparent);
+            border-radius: 8px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .status-message {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+
+        .status-loading {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .status-success {
+            background-color: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .status-error {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="brand">
+                <div style="font-size: 1.5rem; font-weight: 700;">Morphik OS</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Knowledge Graph
+                    Visualization</div>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html" class="nav-item">
+                        <span>📊</span>
+                        <span>Dashboard</span>
+                    </a></li>
+                <li><a href="agents.html" class="nav-item">
+                        <span>🤖</span>
+                        <span>Agents</span>
+                    </a></li>
+                <li><a href="graph-viz.html" class="nav-item active">
+                        <span>🕸️</span>
+                        <span>Graph Viewer</span>
+                    </a></li>
+                <li><a href="#" class="nav-item">
+                        <span>⚙️</span>
+                        <span>Settings</span>
+                    </a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <header>
+                <h1>Knowledge Graph Visualization</h1>
+                <p style="color: var(--text-secondary);">Explore entity relationships and knowledge structures</p>
+            </header>
+
+            <!-- Controls -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="graph-controls">
+                    <div class="control-group">
+                        <label for="graphSelect">Select Graph</label>
+                        <select id="graphSelect" onchange="onGraphSelect()">
+                            <option value="">-- Select a graph --</option>
+                            <option value="planning_kb_graph">Planning KB</option>
+                            <option value="interface_kb_graph">Interface KB</option>
+                            <option value="motion_kb_graph">Motion KB</option>
+                            <option value="vibration_kb_graph">Vibration KB</option>
+                            <option value="visual_kb_graph">Visual KB</option>
+                            <option value="computer_kb_graph">Computer KB</option>
+                            <option value="redteam_kb_graph">RedTeam KB</option>
+                            <option value="dr_kb_graph">DR KB</option>
+                            <option value="inventory_kb_graph">Inventory KB</option>
+                            <option value="synthesis_kb_graph">Synthesis KB</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="folderName">Folder Name (Optional)</label>
+                        <input type="text" id="folderName" placeholder="e.g., planning_kb">
+                    </div>
+                    <div class="control-group" style="display: flex; align-items: flex-end;">
+                        <button onclick="loadGraph()" class="btn btn-primary" style="width: 100%;">
+                            Load Graph
+                        </button>
+                    </div>
+                </div>
+
+                <div id="statusMessage"></div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid" id="statsGrid" style="display: none;">
+                <div class="stat-card">
+                    <div class="stat-value" id="nodeCount">0</div>
+                    <div class="stat-label">Entities (Nodes)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="edgeCount">0</div>
+                    <div class="stat-label">Relationships (Edges)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="graphStatus">-</div>
+                    <div class="stat-label">Graph Status</div>
+                </div>
+            </div>
+
+            <!-- Graph Container -->
+            <div class="card">
+                <div id="cy"></div>
+            </div>
+
+            <!-- Legend -->
+            <div class="card" style="margin-top: 1.5rem;">
+                <h3 style="margin-bottom: 1rem; font-size: 1rem;">Legend & Controls</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="width: 16px; height: 16px; border-radius: 50%; background-color: #3b82f6;"></div>
+                        <span style="font-size: 0.875rem; color: var(--text-secondary);">Entity Node</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="width: 24px; height: 2px; background-color: #9ca3af;"></div>
+                        <span style="font-size: 0.875rem; color: var(--text-secondary);">Relationship</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="font-size: 0.875rem; color: var(--text-secondary);">🖱️ Drag to pan</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="font-size: 0.875rem; color: var(--text-secondary);">🔍 Scroll to zoom</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let cy = null;
+
+        // Initialize Cytoscape
+        function initCytoscape() {
+            cy = cytoscape({
+                container: document.getElementById('cy'),
+                style: [
+                    {
+                        selector: 'node',
+                        style: {
+                            'background-color': '#3b82f6',
+                            'label': 'data(label)',
+                            'color': '#e5e7eb',
+                            'text-valign': 'center',
+                            'text-halign': 'center',
+                            'font-size': '11px',
+                            'font-weight': '500',
+                            'width': '50px',
+                            'height': '50px',
+                            'text-wrap': 'wrap',
+                            'text-max-width': '70px',
+                            'border-width': 2,
+                            'border-color': '#1e40af'
+                        }
+                    },
+                    {
+                        selector: 'node:selected',
+                        style: {
+                            'background-color': '#60a5fa',
+                            'border-color': '#3b82f6',
+                            'border-width': 3
+                        }
+                    },
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': 2,
+                            'line-color': '#6b7280',
+                            'target-arrow-color': '#6b7280',
+                            'target-arrow-shape': 'triangle',
+                            'curve-style': 'bezier',
+                            'label': 'data(type)',
+                            'font-size': '9px',
+                            'color': '#9ca3af',
+                            'text-rotation': 'autorotate',
+                            'text-background-opacity': 1,
+                            'text-background-color': '#1f2937',
+                            'text-background-padding': '2px'
+                        }
+                    },
+                    {
+                        selector: 'edge:selected',
+                        style: {
+                            'line-color': '#3b82f6',
+                            'target-arrow-color': '#3b82f6',
+                            'width': 3
+                        }
+                    }
+                ],
+                layout: {
+                    name: 'cose',
+                    idealEdgeLength: 100,
+                    nodeOverlap: 20,
+                    refresh: 20,
+                    fit: true,
+                    padding: 30,
+                    randomize: false,
+                    componentSpacing: 100,
+                    nodeRepulsion: 400000,
+                    edgeElasticity: 100,
+                    nestingFactor: 5,
+                    gravity: 80,
+                    numIter: 1000,
+                    initialTemp: 200,
+                    coolingFactor: 0.95,
+                    minTemp: 1.0
+                }
+            });
+
+            // Add click event to show node details
+            cy.on('tap', 'node', function (evt) {
+                const node = evt.target;
+                console.log('Node clicked:', node.data());
+            });
+        }
+
+        function onGraphSelect() {
+            const graphSelect = document.getElementById('graphSelect');
+            const folderInput = document.getElementById('folderName');
+            const selectedGraph = graphSelect.value;
+
+            if (selectedGraph) {
+                // Extract folder name from graph name (remove _graph suffix)
+                const folderName = selectedGraph.replace('_graph', '');
+                folderInput.value = folderName;
+            }
+        }
+
+        function showStatus(message, type = 'loading') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `status-message status-${type}`;
+            statusEl.style.display = 'block';
+        }
+
+        function hideStatus() {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.style.display = 'none';
+        }
+
+        function updateStats(nodeCount, edgeCount, status = 'Loaded') {
+            document.getElementById('nodeCount').textContent = nodeCount;
+            document.getElementById('edgeCount').textContent = edgeCount;
+            document.getElementById('graphStatus').textContent = status;
+            document.getElementById('statsGrid').style.display = 'grid';
+        }
+
+        async function loadGraph() {
+            const graphSelect = document.getElementById('graphSelect');
+            const folderInput = document.getElementById('folderName');
+            const graphName = graphSelect.value.trim();
+            const folderName = folderInput.value.trim() || null;
+
+            if (!graphName) {
+                showStatus('Please select a graph', 'error');
+                return;
+            }
+
+            try {
+                showStatus('Loading graph...', 'loading');
+
+                // Get graph visualization data
+                const data = await api.getGraphVisualization(graphName, folderName);
+
+                console.log('Graph data:', data);
+
+                // Initialize Cytoscape if not already done
+                if (!cy) {
+                    initCytoscape();
+                }
+
+                // Clear existing elements
+                cy.elements().remove();
+
+                // Add nodes (entities)
+                if (data.nodes && data.nodes.length > 0) {
+                    data.nodes.forEach(node => {
+                        cy.add({
+                            group: 'nodes',
+                            data: {
+                                id: node.id,
+                                label: node.label || node.id,
+                                type: node.type
+                            }
+                        });
+                    });
+                }
+
+                // Add edges (relationships)
+                if (data.links && data.links.length > 0) {
+                    data.links.forEach(link => {
+                        cy.add({
+                            group: 'edges',
+                            data: {
+                                id: `${link.source}-${link.target}`,
+                                source: link.source,
+                                target: link.target,
+                                type: link.type || 'related_to'
+                            }
+                        });
+                    });
+                }
+
+                // Run layout
+                cy.layout({
+                    name: 'cose',
+                    animate: true,
+                    animationDuration: 1000
+                }).run();
+
+                const nodeCount = data.nodes?.length || 0;
+                const edgeCount = data.links?.length || 0;
+
+                updateStats(nodeCount, edgeCount);
+                showStatus(`Successfully loaded ${nodeCount} entities and ${edgeCount} relationships`, 'success');
+
+            } catch (error) {
+                console.error('Error loading graph:', error);
+                showStatus(`Error: ${error.message}`, 'error');
+                document.getElementById('statsGrid').style.display = 'none';
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            initCytoscape();
+        });
+    </script>
+</body>
+
+</html>

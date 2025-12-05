@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic System UI</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght%40400;500;600&display=swap" rel="stylesheet">
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <header>
+            <div class="logo">
+                <span class="logo-icon">🤖</span>
+                <h1>SSE AI Agentic System</h1>
+            </div>
+            <nav>
+                <button class="nav-btn active" data-tab="chat">Chat</button>
+                <button class="nav-btn" data-tab="kb">Ingestion</button>
+                <button class="nav-btn" data-tab="documents">Documents</button>
+                <button class="nav-btn" data-tab="graph">Graph</button>
+            </nav>
+        </header>
+
+        <main>
+            <!-- Chat Tab -->
+            <section id="chat-tab" class="tab-content active">
+                <div class="chat-container">
+                    <div class="chat-history" id="chat-history">
+                        <div class="message system">
+                            <div class="message-content">
+                                Hello! I am your AI Assistant. I can help you with computer tasks, pilot instructions,
+                                and more. How can I assist you today?
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <textarea id="user-input" placeholder="Type your message here..." rows="1"></textarea>
+                        <button id="send-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24"
+                                height="24">
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Knowledge Base Tab -->
+            <section id="kb-tab" class="tab-content">
+                <div class="kb-container">
+                    <h2>Knowledge Base Management</h2>
+
+                    <div class="form-group">
+                        <label for="kb-select">Select Target Knowledge Base</label>
+                        <select id="kb-select">
+                            <option value="computer">Computer KB (Port 8034)</option>
+                            <option value="pilot">Pilot KB (Port 8035)</option>
+                        </select>
+                    </div>
+
+                    <div class="ingest-methods">
+                        <div class="method-card">
+                            <h3>Insert Text</h3>
+                            <textarea id="ingest-text" placeholder="Enter text content to ingest..."
+                                rows="6"></textarea>
+                            <button id="ingest-text-btn" class="primary-btn">Ingest Text</button>
+                        </div>
+
+                        <div class="method-card">
+                            <h3>Upload File</h3>
+                            <div class="file-upload-area" id="drop-zone">
+                                <input type="file" id="file-input" hidden>
+                                <p>Drag & drop a file here or <span class="browse-link">browse</span></p>
+                                <p class="file-info" id="file-name"></p>
+                            </div>
+                            <button id="ingest-file-btn" class="primary-btn" disabled>Ingest File</button>
+                        </div>
+                    </div>
+
+                    <div id="ingest-status" class="status-message"></div>
+                </div>
+            </section>
+            <!-- Documents Tab -->
+            <div id="documents-tab" class="tab-content">
+                <div class="kb-container">
+                    <h2>Document Management</h2>
+                    <div class="form-group">
+                        <label for="doc-kb-select">Select Knowledge Base</label>
+                        <select id="doc-kb-select">
+                            <option value="computer">Computer KB</option>
+                            <option value="pilot">Pilot KB</option>
+                        </select>
+                    </div>
+                    <div class="documents-list-container">
+                        <div class="docs-header">
+                            <span>File Name</span>
+                            <span>Status</span>
+                            <span>Actions</span>
+                        </div>
+                        <div id="documents-list" class="docs-list">
+                            <!-- Documents will be populated here -->
+                        </div>
+                    </div>
+                    <div id="doc-status-msg" class="status-message"></div>
+                </div>
+            </div>
+
+            <!-- Graph Tab -->
+            <div id="graph-tab" class="tab-content">
+                <div class="graph-wrapper">
+                    <div class="graph-controls">
+                        <select id="graph-kb-select">
+                            <option value="computer">Computer KB</option>
+                            <option value="pilot">Pilot KB</option>
+                        </select>
+                        <button id="refresh-graph-btn" class="secondary-btn"><i class="fas fa-sync-alt"></i>
+                            Refresh</button>
+                    </div>
+                    <div id="graph-container"></div>
+                    <div class="graph-legend">
+                        <div class="legend-item"><span class="dot" style="background: #97c2fc;"></span> Entity</div>
+                        <div class="legend-item"><span class="dot" style="background: #fb7e81;"></span> Selected</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+
+</html>

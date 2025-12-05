@@ -1,0 +1,375 @@
+# API Basic Operations
+
+> End-to-end walkthrough of ingestion, retrieval, and LLM integration using the Morphik REST API.
+
+This cookbook walks through the core Morphik workflow using the REST API—multimodal ingestion for high-accuracy retrieval, text ingestion for OCR-driven chunks, and integrating with your own LLM.
+
+> **Prerequisites**
+>
+> * Morphik API endpoint (e.g., `http://localhost:8000` or `https://api.morphik.ai`)
+> * API credentials via `MORPHIK_API_KEY` (if authentication is enabled)
+> * For the optional OpenAI example, set `OPENAI_API_KEY`
+
+## 1. Environment setup
+
+```bash  theme={null}
+export MORPHIK_API_URL="https://api.morphik.ai"
+export MORPHIK_API_KEY="your-api-key"
+export QUESTION="What are the key takeaways from the uploaded document?"
+```
+
+## 2. Multimodal ingestion (ColPali)
+
+This path indexes the original file contents directly, yielding higher accuracy for scanned pages, tables, and images.
+
+```bash  theme={null}
+# Ingest a document with ColPali (multimodal)
+curl -X POST "${MORPHIK_API_URL}/ingest/file" \
+  -H "Authorization: Bearer ${MORPHIK_API_KEY}" \
+  -F "file=@/path/to/document.pdf" \
+  -F 'metadata={"demo_variant": "multimodal"}' \
+  -F "use_colpali=true"
+```
+
+**Response:**
+
+```json  theme={null}
+{
+  "external_id": "doc-123abc",
+  "filename": "document.pdf",
+  "status": "processing",
+  "metadata": {"demo_variant": "multimodal"}
+}
+```
+
+### Wait for processing to complete
+
+```bash  theme={null}
+# Check document status
+curl -X GET "${MORPHIK_API_URL}/documents/doc-123abc/status" \
+  -H "Authorization: Bearer ${MORPHIK_API_KEY}"
+```
+
+**Response when ready:**
+
+```json  theme={null}
+{
+  "status": "completed",
+  "document_id": "doc-123abc",
+  "chunks_created": 15
+}
+```
+
+## 3. Text ingestion (OCR + chunking)
+
+This path OCRs the document before chunking it, making the text immediately available for retrieval.
+
+```bash  theme={null}
+# Ingest without ColPali (standard text extraction)
+curl -X POST "${MORPHIK_API_URL}/ingest/file" \
+  -H "Authorization: Bearer ${MORPHIK_API_KEY}" \
+  -F "file=@/path/to/document.pdf" \
+  -F 'metadata={"demo_variant": "standard"}' \
+  -F "use_colpali=false"
+```
+
+## 4. Query with Morphik completion
+
+Generate a completion directly using Morphik's configured LLM.
+
+### Multimodal query (ColPali)
+
+```bash  theme={null}
+curl -X POST "${MORPHIK_API_URL}/query" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${MORPHIK_API_KEY}" \
+  -d '{
+    "query": "What are the key takeaways from the uploaded document?",
+    "use_colpali": true,
+    "k": 4,
+    "filters": {"demo_variant": "multimodal"}
+  }'
+```
+
+**Response:**
+
+```json  theme={null}
+{
+  "completion": "The key takeaways from the document are...",
+  "usage": {
+    "prompt_tokens": 1250,
+    "completion_tokens": 150,
+    "total_tokens": 1400
+  },
+  "sources": [
+    {
+      "document_id": "doc-123abc",
+      "chunk_number": 3,
+      "score": 0.89
+    }
+  ]
+}
+```
+
+### Text query (standard)
+
+```bash  theme={null}
+curl -X POST "${MORPHIK_API_URL}/query" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${MORPHIK_API_KEY}" \
+  -d '{
+    "query": "What are the key takeaways?",
+    "use_colpali": false,
+    "k": 4,
+    "filters": {"demo_variant": "standard"}
+  }'
+```
+
+## 5. Query with system prompt override
+
+Override the default system prompt to customize the LLM's behavior and response style.
+
+```bash  theme={null}
+curl -X POST "${MORPHIK_API_URL}/query" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${MORPHIK_API_KEY}" \
+  -d '{
+    "query": "What are the key takeaways?",
+    "k": 4,
+    "filters": {"demo_variant": "multimodal"},
+    "prompt_overrides": {
+      "query": {
+        "system_prompt": "You are a legal expert. Analyze the document and provide insights in formal legal language. Always cite specific sections when making claims."
+      }
+    }
+  }'
+```
+
+**Example with different persona:**
+
+```bash  theme={null}
+# Pirate assistant example
+curl -X POST "${MORPHIK_API_URL}/query" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What is this document about?",
+    "k": 3,
+    "prompt_overrides": {
+      "query": {
+        "system_prompt": "You are a pirate assistant. Always respond in pirate speak with arrr and matey! Be entertaining while staying accurate to the document content."
+      }
+    }
+  }'
+```
+
+**Response:**
+
+```json  theme={null}
+{
+  "completion": "Arrr, me hearty! This here document be talkin' about...",
+  "usage": {"prompt_tokens": 1100, "completion_tokens": 85, "total_tokens": 1185}
+}
+```
+
+## 6. Retrieve chunks for your own LLM
+
+For production workloads, retrieve Morphik's curated chunks and forward them to your preferred LLM. This gives you full control over prompts, orchestration, and rate limits.
+
+### Step 1: Retrieve relevant chunks
+
+```bash  theme={null}
+curl -X POST "${MORPHIK_API_URL}/retrieve/chunks" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${MORPHIK_API_KEY}" \
+  -d '{
+    "query": "What are the key takeaways?",
+    "use_colpali": true,
+    "k": 4,
+    "padding": 1,
+    "filters": {"demo_variant": "multimodal"}
+  }'
+```
+
+**Response:**
+
+```json  theme={null}
+[
+  {
+    "document_id": "doc-123abc",
+    "chunk_number": 3,
+    "content": "The key findings indicate...",
+    "score": 0.89,
+    "download_url": "https://storage.morphik.ai/chunks/doc-123abc-3.png",
+    "content_type": "image/png"
+  },
+  {
+    "document_id": "doc-123abc",
+    "chunk_number": 7,
+    "content": "Additional analysis shows...",
+    "score": 0.82,
+    "download_url": null,
+    "content_type": "text/plain"
+  }
+]
+```
+
+### Step 2: Forward to your LLM (OpenAI example)
+
+#### Text-only chunks with OpenAI
+
+```bash  theme={null}
+# Extract text content from chunks
+TEXT_CONTEXT=$(curl -s -X POST "${MORPHIK_API_URL}/retrieve/chunks" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What are the key takeaways?",
+    "use_colpali": false,
+    "k": 4,
+    "filters": {"demo_variant": "standard"}
+  }' | jq -r '.[] | "Source #\(.chunk_number):\n\(.content)"' | tr '\n' ' ')
+
+# Send to OpenAI
+curl https://api.openai.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${OPENAI_API_KEY}" \
+  -d "{
+    \"model\": \"gpt-4o-mini\",
+    \"messages\": [
+      {
+        \"role\": \"system\",
+        \"content\": \"You are a helpful assistant. Use only the provided context to answer questions.\"
+      },
+      {
+        \"role\": \"user\",
+        \"content\": \"Context: ${TEXT_CONTEXT}\n\nQuestion: ${QUESTION}\"
+      }
+    ]
+  }"
+```
+
+#### Multimodal chunks with OpenAI (vision)
+
+```bash  theme={null}
+# Retrieve multimodal chunks with images
+CHUNKS=$(curl -s -X POST "${MORPHIK_API_URL}/retrieve/chunks" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What are the key takeaways?",
+    "use_colpali": true,
+    "k": 4,
+    "filters": {"demo_variant": "multimodal"}
+  }')
+
+# Build multimodal content (requires jq processing for proper JSON)
+# For simplicity, here's a Python example:
+
+cat > query_openai.py << 'EOF'
+import os
+import json
+import requests
+
+chunks = requests.post(
+    f"{os.environ['MORPHIK_API_URL']}/retrieve/chunks",
+    json={
+        "query": os.environ["QUESTION"],
+        "use_colpali": True,
+        "k": 4,
+        "filters": {"demo_variant": "multimodal"}
+    }
+).json()
+
+# Build multimodal message content
+content = [{"type": "text", "text": f"Answer using these sources.\n\nQuestion: {os.environ['QUESTION']}"}]
+
+for chunk in chunks:
+    if chunk.get("download_url") and chunk.get("content_type", "").startswith("image/"):
+        content.append({
+            "type": "image_url",
+            "image_url": {"url": chunk["download_url"]}
+        })
+
+# Send to OpenAI
+response = requests.post(
+    "https://api.openai.com/v1/chat/completions",
+    headers={"Authorization": f"Bearer {os.environ['OPENAI_API_KEY']}"},
+    json={
+        "model": "gpt-4o",
+        "messages": [{"role": "user", "content": content}]
+    }
+)
+
+print(response.json()["choices"][0]["message"]["content"])
+EOF
+
+python query_openai.py
+```
+
+### Step 3: Using other LLM providers
+
+The same pattern works with any LLM provider. Morphik handles retrieval and chunking; you control the completion:
+
+**Anthropic Claude:**
+
+```bash  theme={null}
+curl https://api.anthropic.com/v1/messages \
+  -H "x-api-key: ${ANTHROPIC_API_KEY}" \
+  -H "anthropic-version: 2023-06-01" \
+  -H "content-type: application/json" \
+  -d "{
+    \"model\": \"claude-3-5-sonnet-20241022\",
+    \"max_tokens\": 1024,
+    \"messages\": [{
+      \"role\": \"user\",
+      \"content\": \"Context: ${TEXT_CONTEXT}\n\nQuestion: ${QUESTION}\"
+    }]
+  }"
+```
+
+**Google Gemini:**
+
+```bash  theme={null}
+curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GOOGLE_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"contents\": [{
+      \"parts\": [{
+        \"text\": \"Context: ${TEXT_CONTEXT}\n\nQuestion: ${QUESTION}\"
+      }]
+    }]
+  }"
+```
+
+## 7. Advanced: Custom prompt template
+
+You can also override the prompt template that formats the context and question:
+
+```bash  theme={null}
+curl -X POST "${MORPHIK_API_URL}/query" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What are the revenue figures?",
+    "k": 4,
+    "prompt_overrides": {
+      "query": {
+        "system_prompt": "You are a financial analyst. Provide precise numerical answers.",
+        "prompt_template": "Based on the following financial data:\n\n{context}\n\nAnalyze and answer: {question}\n\nProvide specific numbers and percentages where available."
+      }
+    }
+  }'
+```
+
+## Summary
+
+Morphik's REST API provides flexible integration options:
+
+1. **Managed completions**: Use Morphik's configured LLM with optional system prompt overrides
+2. **Bring your own LLM**: Retrieve curated chunks and forward to any LLM provider
+3. **Multimodal support**: Handle both text and visual content seamlessly
+4. **Full control**: Override system prompts, prompt templates, and completion parameters
+
+This separation of concerns lets you focus on your application logic while Morphik handles high-quality retrieval and chunking.
+
+
+---
+
+> To find navigation and other pages in this documentation, fetch the llms.txt file at: https://morphik.ai/docs/llms.txt

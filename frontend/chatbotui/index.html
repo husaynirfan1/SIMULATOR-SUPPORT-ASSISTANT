@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simulator Support Assistant</title>
+
+    <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        gemini: {
+                            bg: '#131314',
+                            sidebar: '#1E1F20',
+                            surface: '#1E1F20',
+                            hover: '#2D2E2F',
+                            active: '#333537',
+                            accent: '#4B9CFF',
+                            text: '#E3E3E3',
+                            subtext: '#9FA0A5',
+                            border: '#444746',
+                            green: '#C4EED0',
+                            user: '#2D2E2F'
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'spin-slow': 'spin 3s linear infinite',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #131314;
+            color: #E3E3E3;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #444746;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5e6160;
+        }
+
+        .markdown-body {
+            font-size: 1rem;
+            line-height: 1.7;
+            color: #E3E3E3;
+        }
+
+        .markdown-body p {
+            margin-bottom: 1em;
+        }
+
+        .markdown-body h1,
+        .markdown-body h2,
+        .markdown-body h3 {
+            font-weight: 600;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #fff;
+        }
+
+        .markdown-body h1 {
+            font-size: 1.5em;
+        }
+
+        .markdown-body h2 {
+            font-size: 1.25em;
+        }
+
+        .markdown-body code {
+            background-color: #2D2E2F;
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+        }
+
+        .markdown-body pre {
+            background-color: #1E1F20;
+            padding: 1em;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-bottom: 1em;
+            border: 1px solid #444746;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+
+        .markdown-body ul {
+            list-style-type: disc;
+            padding-left: 1.5em;
+            margin-bottom: 1em;
+        }
+
+        .markdown-body ol {
+            list-style-type: decimal;
+            padding-left: 1.5em;
+            margin-bottom: 1em;
+        }
+
+        .markdown-body a {
+            color: #4B9CFF;
+            text-decoration: none;
+        }
+
+        .markdown-body a:hover {
+            text-decoration: underline;
+        }
+
+        .markdown-body blockquote {
+            border-left: 4px solid #444746;
+            padding-left: 1em;
+            color: #9FA0A5;
+            margin-bottom: 1em;
+        }
+
+        /* Table Styles */
+        .markdown-body table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1em;
+            color: #FFFFFF;
+        }
+
+        .markdown-body th,
+        .markdown-body td {
+            padding: 0.75em;
+            border: 1px solid #444746;
+            color: #FFFFFF;
+        }
+
+        .markdown-body th {
+            background-color: #2D2E2F;
+            font-weight: 600;
+            text-align: left;
+        }
+
+        .markdown-body tr:nth-child(even) {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .thinking-content {
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            overflow: hidden;
+        }
+
+        .thinking-content.collapsed {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        .thinking-content.expanded {
+            max-height: 3000px;
+            opacity: 1;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .cursor::after {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background-color: #4B9CFF;
+            margin-left: 4px;
+            animation: blink 1s step-end infinite;
+            vertical-align: middle;
+        }
+
+        .cursor.finished::after {
+            display: none;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+        }
+
+        .phase-indicator {
+            position: relative;
+            padding-left: 28px;
+        }
+
+        .phase-indicator::before {
+            content: '';
+            position: absolute;
+            left: 11px;
+            top: 28px;
+            bottom: -12px;
+            width: 2px;
+            background: linear-gradient(to bottom, #444746 0%, transparent 100%);
+        }
+
+        .phase-indicator:last-child::before {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="flex h-screen w-full">
+        <!-- Sidebar -->
+        <aside id="sidebar"
+            class="bg-gemini-sidebar w-[280px] flex-shrink-0 flex flex-col border-r border-[#444746]/30 transform transition-transform duration-300 absolute z-50 h-full -translate-x-full">
+            <div class="p-4 flex items-center justify-between">
+                <button onclick="toggleSidebar()"
+                    class="p-2 hover:bg-gemini-hover rounded-full text-gemini-subtext transition-colors">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <div class="px-4 mb-6">
+                <button onclick="newChat()"
+                    class="w-full bg-[#1A1A1C] hover:bg-gemini-hover text-gemini-subtext hover:text-gemini-text py-3 px-4 rounded-full flex items-center gap-3 transition-all duration-200 border border-transparent hover:border-[#444746]/50 shadow-sm">
+                    <i data-lucide="plus" class="w-5 h-5"></i>
+                    <span class="font-medium text-sm">New chat</span>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-2">
+                <div class="px-4 py-2 text-xs font-medium text-gemini-subtext mb-2">Recent</div>
+                <div class="space-y-1" id="history-list">
+                    <button
+                        class="w-full text-left px-4 py-2 rounded-full hover:bg-gemini-hover text-sm text-gemini-text truncate flex items-center gap-2 group transition-colors">
+                        <i data-lucide="message-square"
+                            class="w-4 h-4 text-gemini-subtext group-hover:text-gemini-text"></i>
+                        <span class="truncate">Multi-Agent System Query</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-2 mt-auto border-t border-[#444746]/30">
+                <button
+                    class="w-full text-left px-4 py-3 rounded-lg hover:bg-gemini-hover text-sm text-gemini-text flex items-center gap-3 transition-colors">
+                    <i data-lucide="help-circle" class="w-5 h-5 text-gemini-subtext"></i>
+                    <span>Help</span>
+                </button>
+                <button
+                    class="w-full text-left px-4 py-3 rounded-lg hover:bg-gemini-hover text-sm text-gemini-text flex items-center gap-3 transition-colors">
+                    <i data-lucide="activity" class="w-5 h-5 text-gemini-subtext"></i>
+                    <span>Activity</span>
+                </button>
+                <button
+                    class="w-full text-left px-4 py-3 rounded-lg hover:bg-gemini-hover text-sm text-gemini-text flex items-center gap-3 transition-colors">
+                    <i data-lucide="settings" class="w-5 h-5 text-gemini-subtext"></i>
+                    <span>Settings</span>
+                </button>
+                <div class="px-4 py-3 flex items-center gap-2 mt-1">
+                    <div id="status-dot" class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]">
+                    </div>
+                    <span class="text-xs text-gemini-subtext">Connecting...</span>
+                </div>
+            </div>
+        </aside>
+
+        <div id="sidebar-overlay" onclick="toggleSidebar()"
+            class="fixed inset-0 bg-black/50 z-40 hidden backdrop-blur-sm transition-opacity"></div>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col h-full relative w-full bg-gemini-bg">
+            <!-- Header -->
+            <div class="flex items-center justify-between p-4 sticky top-0 z-20 bg-gemini-bg/95 backdrop-blur-md">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()"
+                        class="p-2 hover:bg-gemini-hover rounded-full text-gemini-subtext transition-colors">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+                    <div
+                        class="flex items-center gap-2 text-gemini-subtext font-medium cursor-pointer hover:text-gemini-text transition-colors select-none">
+                        <span class="text-lg tracking-tight">Agentic Simulator Support Assistant</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div id="status-indicator"
+                        class="w-2.5 h-2.5 rounded-full bg-red-500 transition-colors duration-500" title="Disconnected">
+                    </div>
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-red-500 p-[2px]">
+                        <div class="w-full h-full rounded-full bg-gemini-bg flex items-center justify-center">
+                            <span class="text-[10px] font-bold text-white">AG</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div id="chat-container" class="flex-1 overflow-y-auto scroll-smooth pb-40">
+                <!-- Welcome Screen -->
+                <div id="welcome-screen"
+                    class="h-full flex flex-col items-center justify-center px-4 text-center pb-20 fade-in">
+                    <div class="mb-10">
+                        <h1
+                            class="text-5xl md:text-6xl font-medium mb-4 bg-gradient-to-r from-[#4B9CFF] via-[#9F7AEA] to-[#F56565] bg-clip-text text-transparent tracking-tight">
+                            Hello, Human
+                        </h1>
+                        <p class="text-2xl md:text-3xl font-medium text-[#444746]">How can I help you today?</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-4xl w-full">
+                        <button onclick="setInput('What are the common interface issues in the system?')"
+                            class="p-5 bg-gemini-surface hover:bg-gemini-hover rounded-2xl text-left transition-all border border-transparent hover:border-gemini-border group">
+                            <div
+                                class="mb-3 p-2 bg-gemini-bg w-fit rounded-lg group-hover:scale-110 transition-transform">
+                                <i data-lucide="layout-dashboard" class="w-5 h-5 text-gemini-accent"></i>
+                            </div>
+                            <span class="text-sm text-gemini-text">Analyze interface issues</span>
+                        </button>
+                        <button onclick="setInput('Check security vulnerabilities in the system')"
+                            class="p-5 bg-gemini-surface hover:bg-gemini-hover rounded-2xl text-left transition-all border border-transparent hover:border-gemini-border group">
+                            <div
+                                class="mb-3 p-2 bg-gemini-bg w-fit rounded-lg group-hover:scale-110 transition-transform">
+                                <i data-lucide="shield" class="w-5 h-5 text-purple-400"></i>
+                            </div>
+                            <span class="text-sm text-gemini-text">Security analysis</span>
+                        </button>
+                        <button onclick="setInput('What motion system components are available?')"
+                            class="p-5 bg-gemini-surface hover:bg-gemini-hover rounded-2xl text-left transition-all border border-transparent hover:border-gemini-border group">
+                            <div
+                                class="mb-3 p-2 bg-gemini-bg w-fit rounded-lg group-hover:scale-110 transition-transform">
+                                <i data-lucide="cpu" class="w-5 h-5 text-orange-400"></i>
+                            </div>
+                            <span class="text-sm text-gemini-text">Motion systems</span>
+                        </button>
+                        <button onclick="setInput('Show me the deficiency records')"
+                            class="p-5 bg-gemini-surface hover:bg-gemini-hover rounded-2xl text-left transition-all border border-transparent hover:border-gemini-border group">
+                            <div
+                                class="mb-3 p-2 bg-gemini-bg w-fit rounded-lg group-hover:scale-110 transition-transform">
+                                <i data-lucide="alert-triangle" class="w-5 h-5 text-green-400"></i>
+                            </div>
+                            <span class="text-sm text-gemini-text">View deficiencies</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                <div id="messages-list" class="flex flex-col gap-6 pt-4 hidden"></div>
+                <div id="scroll-anchor"></div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="absolute bottom-0 left-0 right-0 bg-gemini-bg pt-4 pb-6 px-4">
+                <div class="max-w-4xl mx-auto relative">
+                    <div id="input-container"
+                        class="bg-gemini-surface rounded-[2rem] border border-transparent focus-within:bg-[#1E1F20] focus-within:border-gemini-text/30 focus-within:shadow-lg transition-all duration-200">
+                        <div class="flex items-center p-2 md:p-3 gap-2">
+                            <button
+                                class="p-2 text-gemini-text hover:bg-gemini-hover rounded-full transition-colors hidden md:block">
+                                <i data-lucide="plus" class="w-5 h-5"></i>
+                            </button>
+
+                            <textarea id="user-input" rows="1" placeholder="Enter a prompt here"
+                                class="flex-1 bg-transparent border-0 focus:ring-0 text-gemini-text placeholder-gemini-subtext resize-none max-h-[200px] py-3 px-2 text-base leading-relaxed outline-none"
+                                oninput="autoResize(this)" onkeydown="handleEnter(event)"></textarea>
+
+                            <div class="flex items-center gap-1" id="input-actions">
+                                <!-- Deep Knowledge Toggle -->
+                                <button id="deep-knowledge-toggle" onclick="toggleDeepKnowledge()"
+                                    class="p-2 text-gemini-subtext hover:bg-gemini-hover rounded-full transition-colors relative group"
+                                    title="Deep Knowledge Mode (Slower but more comprehensive)">
+                                    <i data-lucide="brain" class="w-5 h-5"></i>
+                                    <!-- Tooltip -->
+                                    <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                        Deep Knowledge: <span id="deep-knowledge-status">OFF</span>
+                                    </div>
+                                </button>
+                                <button
+                                    class="p-2 text-gemini-text hover:bg-gemini-hover rounded-full transition-colors">
+                                    <i data-lucide="image" class="w-5 h-5"></i>
+                                </button>
+                                <button
+                                    class="p-2 text-gemini-text hover:bg-gemini-hover rounded-full transition-colors">
+                                    <i data-lucide="mic" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+
+                            <button id="send-btn" onclick="sendMessage()"
+                                class="hidden p-2 bg-gemini-text text-gemini-bg hover:opacity-90 rounded-full transition-all duration-200">
+                                <i data-lucide="arrow-up" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-center mt-3 text-xs text-gemini-subtext">
+                        Simulator Support Assistant may make mistakes. Verify important information.
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // Initialize Mermaid with dark theme
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#4B9CFF',
+                primaryTextColor: '#E3E3E3',
+                primaryBorderColor: '#444746',
+                lineColor: '#9FA0A5',
+                secondaryColor: '#2D2E2F',
+                tertiaryColor: '#1E1F20',
+                background: '#131314',
+                mainBkg: '#1E1F20',
+                secondBkg: '#2D2E2F',
+                textColor: '#E3E3E3',
+                fontSize: '14px'
+            }
+        });
+
+        // State
+        let socket = null;
+        
+        // WebSocket URL configuration
+        // When accessed via Tailscale funnel (HTTPS), use the Tailscale hostname with port 8082
+        // For local access (HTTP), use localhost:8082
+        let WS_URL;
+        if (window.location.protocol === 'https:') {
+            // Public access via Tailscale funnel - use the same hostname but port 8082
+            const hostname = window.location.hostname;
+            WS_URL = `wss://${hostname}:8082/ws/query`;
+        } else {
+            // Local development - use localhost
+            WS_URL = 'ws://localhost:8082/ws/query';
+        }
+        
+        console.log('WebSocket URL:', WS_URL);
+        console.log('window.location.protocol:', window.location.protocol);
+        console.log('window.location.hostname:', window.location.hostname);
+        
+        let currentMessageId = null;
+        let isGenerating = false;
+        let isConnected = false;
+        let useDeepKnowledge = false;  // ✅ NEW: Deep knowledge mode toggle
+        let conversationState = null;  // ✅ Store OT conversation state for multi-turn
+
+        // DOM
+        const input = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const inputActions = document.getElementById('input-actions');
+        const messagesList = document.getElementById('messages-list');
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const scrollAnchor = document.getElementById('scroll-anchor');
+        const statusIndicator = document.getElementById('status-indicator');
+        const statusDot = document.getElementById('status-dot');
+
+        // WebSocket Connection
+        function connect() {
+            updateStatus('connecting');
+            socket = new WebSocket(WS_URL);
+
+            socket.onopen = () => {
+                console.log('✓ Connected to server');
+                isConnected = true;
+                updateStatus('connected');
+            };
+
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleStreamEvent(data);
+                } catch (e) {
+                    console.error('Parse error:', e);
+                }
+            };
+
+            socket.onclose = () => {
+                console.log('✗ Disconnected from server');
+                isConnected = false;
+                updateStatus('disconnected');
+                setTimeout(connect, 3000);
+            };
+
+            socket.onerror = (e) => {
+                console.error('WebSocket error:', e);
+                updateStatus('error');
+            };
+        }
+
+        function updateStatus(status) {
+            const colors = {
+                connecting: { bg: 'bg-yellow-500', shadow: 'shadow-[0_0_8px_rgba(234,179,8,0.4)]', text: 'Connecting...' },
+                connected: { bg: 'bg-green-500', shadow: 'shadow-[0_0_8px_rgba(34,197,94,0.4)]', text: 'Connected' },
+                disconnected: { bg: 'bg-red-500', shadow: 'shadow-[0_0_8px_rgba(239,68,68,0.4)]', text: 'Disconnected' },
+                error: { bg: 'bg-red-500', shadow: 'shadow-[0_0_8px_rgba(239,68,68,0.4)]', text: 'Error' }
+            };
+
+            const config = colors[status];
+            statusIndicator.className = `w-2.5 h-2.5 rounded-full ${config.bg} ${config.shadow} transition-colors duration-500`;
+            statusDot.className = `w-2 h-2 rounded-full ${config.bg} ${config.shadow}`;
+            statusDot.nextElementSibling.textContent = config.text;
+        }
+
+        // Event Handlers
+        function handleStreamEvent(event) {
+            if (!currentMessageId) return;
+
+            console.log('Event:', event.event_type, event.data);
+
+            switch (event.event_type) {
+                case 'planning_start':
+                    updatePhase('planning', 'loading', 'Analyzing query...');
+                    break;
+
+                case 'planning_complete':
+                    const reasoning = event.data.reasoning || event.data.message || '';
+                    const agents = event.data.agents_to_consult || event.data.agents_consulted || [];
+                    updatePhase('planning', 'complete', 'Planning Complete');
+                    updatePlanningThoughts(reasoning, agents);
+                    break;
+
+                case 'replan_detected':
+                case 'replan_loop_start':
+                    // ✅ Show re-plan notification
+                    updatePhase('planning', 'loading', 'Re-planning with DR context...');
+                    const replanContainer = document.getElementById(`planning-thoughts-${currentMessageId}`);
+                    if (replanContainer) {
+                        // Remove existing replan badge if any
+                        const existingBadge = replanContainer.querySelector('.replan-badge');
+                        if (existingBadge) existingBadge.remove();
+
+                        const replanBadge = document.createElement('div');
+                        replanBadge.className = 'replan-badge text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded mt-2 border border-yellow-500/30 flex items-center gap-1';
+                        replanBadge.innerHTML = `<i data-lucide="refresh-cw" class="w-3 h-3 animate-spin"></i><span>${event.data.message}</span>`;
+                        replanContainer.appendChild(replanBadge);
+                        lucide.createIcons();
+                    }
+                    // Clear agents container for re-consultation
+                    const agentsContainer = document.getElementById(`agents-container-${currentMessageId}`);
+                    if (agentsContainer) {
+                        agentsContainer.innerHTML = '';
+                    }
+                    break;
+
+                case 'replan_thoughts':
+                    // ✅ Update planning thoughts with re-plan reasoning
+                    updatePhase('planning', 'complete', 'Re-planning Complete');
+                    updatePlanningThoughts(event.data.reasoning, event.data.agents);
+                    // Update badge to show completion
+                    const replanBadgeComplete = document.querySelector(`#planning-thoughts-${currentMessageId} .replan-badge`);
+                    if (replanBadgeComplete) {
+                        replanBadgeComplete.className = 'replan-badge text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded mt-2 border border-green-500/30 flex items-center gap-1';
+                        replanBadgeComplete.innerHTML = `<i data-lucide="check-circle" class="w-3 h-3"></i><span>Re-planning complete with DR context</span>`;
+                        lucide.createIcons();
+                    }
+                    break;
+
+                case 'replan_agent_start':
+                    // ✅ Show agent being re-queried
+                    addAgentPhase(event.data.agent, 'loading');
+                    const agentElStart = document.getElementById(`agent-${event.data.agent}-${currentMessageId}`);
+                    if (agentElStart) {
+                        // Add "Re-querying" badge
+                        const badge = document.createElement('span');
+                        badge.className = 'text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded ml-2';
+                        badge.textContent = 'Re-querying';
+                        agentElStart.querySelector('.text-sm').appendChild(badge);
+                    }
+                    break;
+
+                case 'replan_agent_complete':
+                    // ✅ Update agent with new response
+                    updateAgentPhase(event.data.agent, 'complete', event.data.preview);
+                    break;
+
+                case 'planning_progress':
+                    // ✅ NEW: Stream planning reasoning in real-time
+                    console.log('📝 Planning progress:', event.data.partial_response?.substring(0, 50));
+                    updatePlanningProgress(event.data.token, event.data.partial_response);
+                    break;
+
+                case 'consultation_start':
+                    updatePhase('consultation', 'loading', 'Consulting specialists...');
+                    break;
+
+                case 'agent_start':
+                    addAgentPhase(event.data.agent, 'loading');
+                    break;
+
+                case 'agent_progress':
+                    // ✅ NEW: Stream specialist response in real-time
+                    console.log(`🔬 Agent progress [${event.data.agent}]:`, event.data.partial_response?.substring(0, 50));
+                    updateAgentProgress(event.data.agent, event.data.chunk, event.data.partial_response, event.data.progress);
+                    break;
+
+                case 'agent_complete':
+                    updateAgentPhase(event.data.agent, 'complete', event.data.preview);
+                    break;
+
+                // ✅ FIX: Handle consultation_complete event
+                case 'consultation_complete':
+                    updatePhase('consultation', 'complete', event.data.message || 'Consultation complete');
+                    break;
+
+                case 'tool_check_start':
+                    updatePhase('tools', 'loading', 'Checking tools...');
+                    break;
+
+                case 'tool_check_complete':
+                    if (event.data.tools_needed && event.data.tools_needed.length > 0) {
+                        updatePhase('tools', 'loading', `Executing ${event.data.tools_needed.length} tool(s)...`);
+                    } else {
+                        // ✅ FIX: If no tools needed, mark as complete immediately
+                        updatePhase('tools', 'complete', 'No tools required');
+                    }
+                    break;
+
+                case 'tool_start':
+                    addToolExecution(event.data.tool, 'loading');
+                    break;
+
+                case 'tool_complete':
+                    updateToolExecution(event.data.tool, 'complete', event.data.preview, event.data.result_count);
+                    break;
+
+                // ✅ FIX: Handle tools_execution_complete event
+                case 'tools_execution_complete':
+                    updatePhase('tools', 'complete', event.data.message || 'Tools complete');
+                    break;
+
+                case 'redteam_start':
+                    updatePhase('redteam', 'loading', 'Security review...');
+                    break;
+
+                case 'redteam_complete':
+                    updatePhase('redteam', 'complete', 'Security check passed');
+                    break;
+
+                case 'synthesis_start':
+                    updatePhase('synthesis', 'loading', 'Synthesizing response...');
+                    break;
+
+                case 'synthesis_progress':
+                    // ✅ NEW: Handle streaming synthesis tokens in real-time
+                    updateStreamingSynthesis(event.data.token, event.data.partial_response, event.data.token_count);
+                    break;
+
+                case 'synthesis_complete':
+                    updatePhase('synthesis', 'complete', 'Synthesis complete');
+                    // Store synthesis metrics for footer
+                    console.log('📊 synthesis_complete event:', event.data);
+                    if (event.data) {
+                        window[`synthesis_metrics_${currentMessageId}`] = {
+                            tokens: event.data.total_tokens,
+                            duration: event.data.synthesis_duration,
+                            ttft: event.data.time_to_first_token,
+                            tps: event.data.tokens_per_second
+                        };
+                        console.log('✅ Stored synthesis metrics:', window[`synthesis_metrics_${currentMessageId}`]);
+                    }
+                    break;
+
+                case 'complete':
+                    finishResponse(event.data.final_answer, event.data.metadata);
+                    collapseThinking();
+                    // ✅ Store conversation state for multi-turn OT conversations
+                    conversationState = {
+                        ot_conversation_state: event.data.ot_conversation_state,
+                        ot_conversation_active: event.data.ot_conversation_active
+                    };
+                    console.log('💾 Stored conversation state:', conversationState);
+                    break;
+
+                case 'error':
+                    showError(event.data.error);
+                    break;
+            }
+        }
+
+        function updatePhase(phase, status, message) {
+            const phaseEl = document.getElementById(`phase-${phase}-${currentMessageId}`);
+            if (!phaseEl) return;
+
+            const icon = phaseEl.querySelector('.phase-icon');
+            const text = phaseEl.querySelector('.phase-text');
+
+            if (status === 'loading') {
+                icon.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 text-gemini-accent animate-spin"></i>';
+                phaseEl.classList.remove('opacity-50');
+            } else if (status === 'complete') {
+                icon.innerHTML = '<i data-lucide="check-circle-2" class="w-4 h-4 text-green-500"></i>';
+                phaseEl.classList.add('opacity-70');
+            }
+
+            if (text && message) {
+                text.textContent = message;
+            }
+
+            lucide.createIcons();
+        }
+
+        function updatePlanningThoughts(reasoning, agents) {
+            const thoughtsEl = document.getElementById(`planning-thoughts-${currentMessageId}`);
+            if (!thoughtsEl) {
+                console.warn('Planning thoughts element not found for finalization');
+                return;
+            }
+
+            // Clean up reasoning text (remove the structured format markers)
+            let cleanReasoning = reasoning;
+            if (reasoning.includes('QUERY_TYPE:')) {
+                // Extract just the REASONING section
+                const reasoningStart = reasoning.indexOf('REASONING:');
+                if (reasoningStart >= 0) {
+                    const reasoningText = reasoning.substring(reasoningStart + 'REASONING:'.length);
+                    const agentsIndex = reasoningText.indexOf('AGENTS:');
+                    cleanReasoning = agentsIndex >= 0
+                        ? reasoningText.substring(0, agentsIndex).trim()
+                        : reasoningText.trim();
+                }
+            }
+
+            thoughtsEl.innerHTML = `
+                <div class="text-sm text-gemini-text/90 mb-3 leading-relaxed">${cleanReasoning}</div>
+                ${agents && agents.length > 0 ? `
+                    <div class="flex flex-wrap gap-2">
+                        ${agents.map(agent => `
+                            <span class="px-3 py-1 bg-gemini-hover/50 text-gemini-accent text-xs rounded-full border border-gemini-border/30">
+                                ${agent}
+                            </span>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        function addAgentPhase(agent, status) {
+            const container = document.getElementById(`agents-container-${currentMessageId}`);
+            if (!container) return;
+
+            const agentEl = document.createElement('div');
+            agentEl.id = `agent-${agent}-${currentMessageId}`;
+            agentEl.className = 'flex items-start gap-3 p-3 bg-gemini-hover/30 rounded-lg border border-gemini-border/20';
+            agentEl.innerHTML = `
+                <div class="agent-icon mt-0.5">
+                    <i data-lucide="loader-2" class="w-4 h-4 text-gemini-accent animate-spin"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium text-gemini-text capitalize">${agent} Specialist</div>
+                    <div class="agent-preview text-xs text-gemini-subtext mt-1">Processing...</div>
+                </div>
+            `;
+
+            container.appendChild(agentEl);
+            lucide.createIcons();
+            scrollToBottom();
+        }
+
+        // ✅ NEW: Update planning phase with streaming text
+        function updatePlanningProgress(token, partialResponse) {
+            // Update the planning thoughts div instead of creating a new element
+            const thoughtsEl = document.getElementById(`planning-thoughts-${currentMessageId}`);
+            if (!thoughtsEl) {
+                console.warn('Planning thoughts element not found');
+                return;
+            }
+
+            // Extract just the REASONING section if available
+            let displayText = partialResponse;
+            if (partialResponse.includes('REASONING:')) {
+                const reasoningStart = partialResponse.indexOf('REASONING:') + 'REASONING:'.length;
+                const reasoningEnd = partialResponse.indexOf('AGENTS:');
+                if (reasoningEnd > reasoningStart) {
+                    displayText = partialResponse.substring(reasoningStart, reasoningEnd).trim();
+                } else {
+                    displayText = partialResponse.substring(reasoningStart).trim();
+                }
+            }
+
+            // Update the thoughts display with streaming text
+            thoughtsEl.innerHTML = `
+                <div class="text-sm text-gemini-text/90 leading-relaxed">${displayText}</div>
+            `;
+            scrollToBottom();
+        }
+
+        // ✅ NEW: Update agent consultation with streaming response
+        function updateAgentProgress(agent, chunk, partialResponse, progress) {
+            const agentEl = document.getElementById(`agent-${agent}-${currentMessageId}`);
+            if (!agentEl) {
+                console.warn(`Agent element not found: agent-${agent}-${currentMessageId}`);
+                return;
+            }
+
+            // Update the existing preview element instead of creating a new one
+            const previewEl = agentEl.querySelector('.agent-preview');
+            if (!previewEl) {
+                console.warn('Agent preview element not found');
+                return;
+            }
+
+            // Update preview with streaming text (first 200 chars)
+            const preview = partialResponse.substring(0, 200) + (partialResponse.length > 200 ? '...' : '');
+            previewEl.textContent = preview;
+            scrollToBottom();
+        }
+
+        function updateAgentPhase(agent, status, preview) {
+            const agentEl = document.getElementById(`agent-${agent}-${currentMessageId}`);
+            if (!agentEl) return;
+
+            const icon = agentEl.querySelector('.agent-icon');
+            const previewEl = agentEl.querySelector('.agent-preview');
+
+            if (status === 'complete') {
+                icon.innerHTML = '<i data-lucide="check-circle-2" class="w-4 h-4 text-green-500"></i>';
+                // Only update preview if provided (otherwise keep the streamed text)
+                if (preview) {
+                    previewEl.textContent = preview;
+                }
+            }
+
+            lucide.createIcons();
+        }
+
+        function addToolExecution(tool, status) {
+            const container = document.getElementById(`tools-container-${currentMessageId}`);
+            if (!container) return;
+
+            // ✅ Check if tool element already exists (prevent duplicates)
+            const existingTool = document.getElementById(`tool-${tool}-${currentMessageId}`);
+            if (existingTool) {
+                console.log(`⚠️ Tool ${tool} already exists, resetting to loading state`);
+                // Reset to loading state
+                const icon = existingTool.querySelector('i');
+                if (icon) {
+                    icon.outerHTML = '<i data-lucide="loader-2" class="w-3 h-3 mt-0.5 animate-spin text-gemini-accent"></i>';
+                    lucide.createIcons();
+                }
+                return;
+            }
+
+            const toolEl = document.createElement('div');
+            toolEl.id = `tool-${tool}-${currentMessageId}`;
+            toolEl.className = 'flex flex-col gap-1 text-xs text-gemini-subtext';
+            toolEl.innerHTML = `
+                <div class="flex items-start gap-2">
+                    <i data-lucide="loader-2" class="w-3 h-3 mt-0.5 animate-spin text-gemini-accent"></i>
+                    <span class="tool-name font-mono">${tool}</span>
+                    <span class="tool-count hidden ml-2 px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs"></span>
+                </div>
+                <div class="tool-preview hidden ml-5 text-gemini-subtext opacity-70"></div>
+            `;
+
+            container.appendChild(toolEl);
+            lucide.createIcons();
+        }
+
+        function updateToolExecution(tool, status, preview, resultCount) {
+            const toolEl = document.getElementById(`tool-${tool}-${currentMessageId}`);
+            if (!toolEl) return;
+
+            const icon = toolEl.querySelector('i');
+            // ✅ Add null check to prevent error
+            if (icon) {
+                icon.outerHTML = '<i data-lucide="check" class="w-3 h-3 mt-0.5 text-green-500"></i>';
+            }
+
+            // ✅ NEW: Show count badge if provided
+            if (resultCount !== undefined && resultCount !== null) {
+                const countEl = toolEl.querySelector('.tool-count');
+                if (countEl) {
+                    countEl.textContent = `${resultCount} records`;
+                    countEl.classList.remove('hidden');
+                }
+            }
+            // Fallback: Parse DR results count from preview text
+            else if ((tool === 'search_deficiency_records' || tool === 'DR Agent') && preview) {
+                const match = preview.match(/Found (\d+)/);
+                if (match) {
+                    const countEl = toolEl.querySelector('.tool-count');
+                    if (countEl) {
+                        countEl.textContent = `${match[1]} records`;
+                        countEl.classList.remove('hidden');
+                    }
+                }
+            }
+
+            const previewEl = toolEl.querySelector('.tool-preview');
+            if (previewEl && preview) {
+                previewEl.textContent = preview;
+                previewEl.classList.remove('hidden');
+            }
+
+            lucide.createIcons();
+        }
+
+        // ✅ NEW: Handle streaming synthesis tokens in real-time
+        function updateStreamingSynthesis(token, partialResponse, tokenCount) {
+            const contentEl = document.getElementById(`content-${currentMessageId}`);
+            if (!contentEl) return;
+
+            // Remove loading animation on first token
+            if (tokenCount === 1 || contentEl.classList.contains('cursor')) {
+                contentEl.classList.remove('cursor');
+                contentEl.innerHTML = '';
+            }
+
+            // Update with partial response (markdown parsed in real-time)
+            if (partialResponse) {
+                try {
+                    contentEl.innerHTML = marked.parse(partialResponse);
+
+                    // Highlight code blocks
+                    contentEl.querySelectorAll('pre code').forEach((block) => {
+                        hljs.highlightElement(block);
+                    });
+
+                    // ✅ ENHANCED: More aggressive scrolling to ensure content is visible
+                    // Method 1: Scroll the messages container to bottom
+                    const messagesContainer = messagesList.parentElement;
+                    if (messagesContainer) {
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }
+                    
+                    // Method 2: Scroll to the content element
+                    contentEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                    
+                    // Method 3: Use the scroll anchor
+                    scrollToBottom();
+                } catch (e) {
+                    // Fallback to plain text if markdown parsing fails
+                    contentEl.textContent = partialResponse;
+                    scrollToBottom();
+                }
+            }
+        }
+
+        function finishResponse(finalAnswer, metadata) {
+            const contentEl = document.getElementById(`content-${currentMessageId}`);
+            if (!contentEl) return;
+
+            contentEl.classList.remove('cursor');
+            contentEl.innerHTML = marked.parse(finalAnswer);
+
+            // Highlight code blocks
+            contentEl.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+
+            // Render Mermaid diagrams
+            contentEl.querySelectorAll('pre code.language-mermaid').forEach(async (block) => {
+                const mermaidCode = block.textContent;
+                const pre = block.parentElement;
+
+                try {
+                    // Create a unique ID for this diagram
+                    const diagramId = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+                    // Render the mermaid diagram
+                    const { svg } = await mermaid.render(diagramId, mermaidCode);
+
+                    // Replace the code block with the rendered SVG
+                    const container = document.createElement('div');
+                    container.className = 'mermaid-diagram bg-[#1E1F20] p-4 rounded-lg border border-[#444746] my-4 overflow-x-auto';
+                    container.innerHTML = svg;
+
+                    pre.replaceWith(container);
+                } catch (error) {
+                    console.error('Mermaid rendering error:', error);
+                    // Keep the code block if rendering fails
+                    pre.classList.add('border', 'border-red-500/50');
+                }
+            });
+
+            // Add metrics footer
+            addMetricsFooter(metadata);
+
+            isGenerating = false;
+            scrollToBottom();
+        }
+
+        function addMetricsFooter(metadata) {
+            console.log('📊 addMetricsFooter called with metadata:', metadata);
+            if (!metadata) {
+                console.log('⚠️ No metadata provided');
+                return;
+            }
+
+            const contentEl = document.getElementById(`content-${currentMessageId}`);
+            if (!contentEl) {
+                console.log('⚠️ Content element not found');
+                return;
+            }
+
+            // Get synthesis metrics if available
+            const synthesisMetrics = window[`synthesis_metrics_${currentMessageId}`];
+            console.log('📊 Synthesis metrics from window:', synthesisMetrics);
+
+            // Build metrics HTML
+            const metrics = [];
+
+            if (synthesisMetrics && synthesisMetrics.tokens > 0) {
+                metrics.push(`${synthesisMetrics.tokens} tokens`);
+
+                if (synthesisMetrics.tps > 0) {
+                    metrics.push(`${synthesisMetrics.tps} tk/s`);
+                }
+
+                if (synthesisMetrics.ttft > 0) {
+                    metrics.push(`${synthesisMetrics.ttft}s TTFT`);
+                }
+
+                if (synthesisMetrics.duration > 0) {
+                    metrics.push(`${synthesisMetrics.duration}s total`);
+                }
+            } else if (metadata.synthesis_tokens > 0) {
+                // Fallback to metadata
+                metrics.push(`${metadata.synthesis_tokens} tokens`);
+
+                if (metadata.tokens_per_second > 0) {
+                    metrics.push(`${metadata.tokens_per_second} tk/s`);
+                }
+
+                if (metadata.time_to_first_token > 0) {
+                    metrics.push(`${metadata.time_to_first_token}s TTFT`);
+                }
+            }
+
+            console.log('📊 Metrics array:', metrics);
+
+            if (metrics.length > 0) {
+                const footerEl = document.createElement('div');
+                footerEl.className = 'mt-4 pt-3 border-t border-gemini-border/30 flex items-center gap-4 text-xs text-gemini-subtext';
+                footerEl.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="zap" class="w-3 h-3"></i>
+                        <span>${metrics.join(' • ')}</span>
+                    </div>
+                `;
+                contentEl.appendChild(footerEl);
+                lucide.createIcons();
+                console.log('✅ Metrics footer added successfully');
+            } else {
+                console.log('⚠️ No metrics to display');
+            }
+        }
+
+        function collapseThinking() {
+            setTimeout(() => {
+                const thinkingContent = document.getElementById(`thinking-content-${currentMessageId}`);
+                const toggleIcon = document.getElementById(`thinking-toggle-${currentMessageId}`);
+                const thinkingHeader = document.getElementById(`thinking-header-${currentMessageId}`);
+
+                if (thinkingContent) {
+                    thinkingContent.classList.remove('expanded');
+                    thinkingContent.classList.add('collapsed');
+                }
+                if (toggleIcon) {
+                    toggleIcon.innerHTML = '<polyline points="9 18 15 12 9 6"></polyline>';
+                }
+                if (thinkingHeader) {
+                    thinkingHeader.innerHTML = `
+                        <i data-lucide="check-circle-2" class="w-5 h-5 text-green-500"></i>
+                        <span class="text-sm font-medium text-gemini-text/90">Process Complete</span>
+                    `;
+                }
+                lucide.createIcons();
+            }, 2000);
+        }
+
+        function showError(error) {
+            const contentEl = document.getElementById(`content-${currentMessageId}`);
+            if (!contentEl) return;
+
+            contentEl.innerHTML = `
+                <div class="text-red-400 border border-red-500/50 bg-red-900/20 p-4 rounded-lg">
+                    <div class="flex items-center gap-2 font-medium mb-1">
+                        <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                        <span>Error</span>
+                    </div>
+                    <div class="text-sm">${error}</div>
+                </div>
+            `;
+            lucide.createIcons();
+            isGenerating = false;
+        }
+
+        // UI Functions
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function newChat() {
+            welcomeScreen.classList.remove('hidden');
+            messagesList.classList.add('hidden');
+            messagesList.innerHTML = '';
+            input.value = '';
+            currentMessageId = null;
+            isGenerating = false;
+            conversationState = null;  // ✅ Reset conversation state
+            autoResize(input);
+        }
+
+        function setInput(text) {
+            input.value = text;
+            autoResize(input);
+            input.focus();
+            toggleSendButton();
+        }
+
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+            toggleSendButton();
+        }
+
+        function toggleSendButton() {
+            if (input.value.trim().length > 0) {
+                sendBtn.classList.remove('hidden');
+                inputActions.classList.add('hidden');
+            } else {
+                sendBtn.classList.add('hidden');
+                inputActions.classList.remove('hidden');
+            }
+        }
+
+        function toggleDeepKnowledge() {
+            useDeepKnowledge = !useDeepKnowledge;
+            const toggleBtn = document.getElementById('deep-knowledge-toggle');
+            const statusText = document.getElementById('deep-knowledge-status');
+            
+            if (useDeepKnowledge) {
+                // Enabled - change to accent color
+                toggleBtn.classList.remove('text-gemini-subtext');
+                toggleBtn.classList.add('text-gemini-accent');
+                statusText.textContent = 'ON (Slower, More Comprehensive)';
+            } else {
+                // Disabled - back to default
+                toggleBtn.classList.remove('text-gemini-accent');
+                toggleBtn.classList.add('text-gemini-subtext');
+                statusText.textContent = 'OFF';
+            }
+            
+            // Reinitialize icons to update the brain icon
+            lucide.createIcons();
+            
+            console.log('🧠 Deep Knowledge Mode:', useDeepKnowledge ? 'ENABLED' : 'DISABLED');
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function sendMessage() {
+            const text = input.value.trim();
+            if (!text || !isConnected || isGenerating) return;
+
+            input.value = '';
+            autoResize(input);
+            welcomeScreen.classList.add('hidden');
+            messagesList.classList.remove('hidden');
+
+            // User message
+            appendUserMessage(text);
+
+            // Assistant message
+            const msgId = Date.now();
+            currentMessageId = msgId;
+            isGenerating = true;
+            appendAssistantMessage(msgId);
+
+            // Send to server with conversation state and deep knowledge flag
+            const payload = { 
+                query: text,
+                use_deep_knowledge: useDeepKnowledge  // ✅ Include deep knowledge flag
+            };
+
+            // ✅ Include previous state if OT conversation is active
+            if (conversationState && conversationState.ot_conversation_active) {
+                payload.previous_state = conversationState;
+                console.log('📤 Sending with previous state:', conversationState.ot_conversation_active);
+            }
+            
+            console.log('📤 Sending payload:', { ...payload, query: text.substring(0, 50) + '...' });
+
+            socket.send(JSON.stringify(payload));
+        }
+
+        function appendUserMessage(text) {
+            const div = document.createElement('div');
+            div.className = 'w-full max-w-4xl mx-auto py-6 px-4 md:px-0 flex gap-4 md:gap-6 flex-row-reverse fade-in';
+            div.innerHTML = `
+                <div class="flex-shrink-0 w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center bg-[#2D2E2F]">
+                    <i data-lucide="user" class="w-5 h-5 text-gemini-text"></i>
+                </div>
+                <div class="bg-[#2D2E2F] rounded-3xl rounded-tr-sm px-5 py-3 text-base text-gemini-text markdown-body max-w-3xl">${text}</div>
+            `;
+            messagesList.appendChild(div);
+            lucide.createIcons();
+            scrollToBottom();
+        }
+
+        // ✅ FIX: Add auto-complete for hanging phases after 30 seconds
+        function appendAssistantMessage(msgId) {
+            const div = document.createElement('div');
+            div.className = 'w-full max-w-4xl mx-auto py-6 px-4 md:px-0 flex gap-4 md:gap-6 fade-in';
+            div.innerHTML = `
+                <div class="flex-shrink-0 w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center relative">
+                    <i data-lucide="bot" class="w-6 h-6 text-gemini-accent"></i>
+                </div>
+                <div class="flex-1 min-w-0 flex flex-col gap-3 w-full">
+                    <div class="text-base font-medium text-gemini-accent">Simulator Support Assistant</div>
+                    
+                    <!-- Thinking Section -->
+                    <div class="w-full bg-[#1E1F20] rounded-xl overflow-hidden border border-[#444746]/50">
+                        <button onclick="toggleThinking(${msgId})" class="w-full flex items-center justify-between p-3 px-4 hover:bg-[#2D2E2F] transition-colors">
+                            <div id="thinking-header-${msgId}" class="flex items-center gap-3">
+                                <i data-lucide="loader-2" class="w-5 h-5 text-gemini-accent animate-spin"></i>
+                                <span class="text-sm font-medium text-gemini-text/90">Analyzing request...</span>
+                            </div>
+                            <svg id="thinking-toggle-${msgId}" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gemini-subtext">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </button>
+                        
+                        <div id="thinking-content-${msgId}" class="thinking-content expanded bg-[#1E1F20] border-t border-[#444746]/50">
+                            <div class="p-4 space-y-4">
+                                <!-- Planning Phase -->
+                                <div id="phase-planning-${msgId}" class="phase-indicator opacity-50">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <div class="w-6 h-6 rounded-full bg-gemini-bg border-2 border-gemini-border flex items-center justify-center phase-icon">
+                                            <i data-lucide="circle" class="w-3 h-3 text-gemini-subtext"></i>
+                                        </div>
+                                        <span class="text-sm font-semibold text-gemini-text phase-text">Planning</span>
+                                    </div>
+                                    <div id="planning-thoughts-${msgId}" class="ml-9 text-xs text-gemini-subtext">
+                                        Determining workflow...
+                                    </div>
+                                </div>
+
+                                <!-- Consultation Phase -->
+                                <div id="phase-consultation-${msgId}" class="phase-indicator opacity-50">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <div class="w-6 h-6 rounded-full bg-gemini-bg border-2 border-gemini-border flex items-center justify-center phase-icon">
+                                            <i data-lucide="circle" class="w-3 h-3 text-gemini-subtext"></i>
+                                        </div>
+                                        <span class="text-sm font-semibold text-gemini-text phase-text">Specialist Consultation</span>
+                                    </div>
+                                    <div id="agents-container-${msgId}" class="ml-9 space-y-2">
+                                    </div>
+                                </div>
+
+                                <!-- Tools Phase -->
+                                <div id="phase-tools-${msgId}" class="phase-indicator opacity-50">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <div class="w-6 h-6 rounded-full bg-gemini-bg border-2 border-gemini-border flex items-center justify-center phase-icon">
+                                            <i data-lucide="circle" class="w-3 h-3 text-gemini-subtext"></i>
+                                        </div>
+                                        <span class="text-sm font-semibold text-gemini-text phase-text">Tool Execution</span>
+                                    </div>
+                                    <div id="tools-container-${msgId}" class="ml-9 space-y-1">
+                                    </div>
+                                </div>
+
+                                <!-- RedTeam Phase -->
+                                <div id="phase-redteam-${msgId}" class="phase-indicator opacity-50">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-6 h-6 rounded-full bg-gemini-bg border-2 border-gemini-border flex items-center justify-center phase-icon">
+                                            <i data-lucide="circle" class="w-3 h-3 text-gemini-subtext"></i>
+                                        </div>
+                                        <span class="text-sm font-semibold text-gemini-text phase-text">Security Review</span>
+                                    </div>
+                                </div>
+
+                                <!-- Synthesis Phase -->
+                                <div id="phase-synthesis-${msgId}" class="phase-indicator opacity-50">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-6 h-6 rounded-full bg-gemini-bg border-2 border-gemini-border flex items-center justify-center phase-icon">
+                                            <i data-lucide="circle" class="w-3 h-3 text-gemini-subtext"></i>
+                                        </div>
+                                        <span class="text-sm font-semibold text-gemini-text phase-text">Synthesis</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Response Content -->
+                    <div id="content-${msgId}" class="markdown-body w-full cursor">
+                        <div class="flex gap-1 h-6 items-center">
+                            <div class="w-2 h-2 bg-gemini-subtext rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+                            <div class="w-2 h-2 bg-gemini-subtext rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+                            <div class="w-2 h-2 bg-gemini-subtext rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            messagesList.appendChild(div);
+            lucide.createIcons();
+            scrollToBottom();
+
+            // ✅ FIX: Add safety timeout - auto-complete hanging phases after 30s
+            setTimeout(() => {
+                if (isGenerating && currentMessageId === msgId) {
+                    console.warn('⚠️ Response timeout - auto-completing phases');
+
+                    // Force complete any loading phases
+                    ['planning', 'consultation', 'tools', 'redteam', 'synthesis'].forEach(phase => {
+                        const phaseEl = document.getElementById(`phase-${phase}-${msgId}`);
+                        if (phaseEl) {
+                            const icon = phaseEl.querySelector('.phase-icon');
+                            if (icon && icon.innerHTML.includes('loader')) {
+                                updatePhase(phase, 'complete', 'Completed');
+                            }
+                        }
+                    });
+                }
+            }, 30000); // 30 second timeout
+        }
+        function toggleThinking(msgId) {
+            const content = document.getElementById(`thinking-content-${msgId}`);
+            const icon = document.getElementById(`thinking-toggle-${msgId}`);
+
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                content.classList.add('expanded');
+                icon.innerHTML = '<polyline points="6 9 12 15 18 9"></polyline>';
+            } else {
+                content.classList.remove('expanded');
+                content.classList.add('collapsed');
+                icon.innerHTML = '<polyline points="9 18 15 12 9 6"></polyline>';
+            }
+            lucide.createIcons();
+        }
+
+        function scrollToBottom() {
+            // Force immediate scroll to show streaming content
+            requestAnimationFrame(() => {
+                scrollAnchor.scrollIntoView({ behavior: 'auto', block: 'end' });
+            });
+        }
+
+        // Initialize
+        connect();
+        input.addEventListener('input', () => autoResize(input));
+    </script>
+</body>
+
+</html>

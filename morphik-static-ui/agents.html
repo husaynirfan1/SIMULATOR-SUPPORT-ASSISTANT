@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morphik OS - CAE Specialist Agents</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="brand">
+                <div style="font-size: 1.5rem; font-weight: 700;">Morphik OS</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">CAE Specialist
+                    Network</div>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html" class="nav-item">
+                        <span>📊</span>
+                        <span>Dashboard</span>
+                    </a></li>
+                <li><a href="agents.html" class="nav-item active">
+                        <span>🤖</span>
+                        <span>Agents</span>
+                    </a></li>
+                <li><a href="graph-viz.html" class="nav-item">
+                        <span>🕸️</span>
+                        <span>Graph Viewer</span>
+                    </a></li>
+                <li><a href="#" class="nav-item">
+                        <span>⚙️</span>
+                        <span>Settings</span>
+                    </a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <header>
+                <h1>Specialist Agent Network</h1>
+                <p style="color: var(--text-secondary);">Manage knowledge bases for CAE domain experts</p>
+            </header>
+
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <span class="stat-label">Total Agents</span>
+                    <span class="stat-value">11</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Status</span>
+                    <span class="stat-value" style="color: #22c55e;">● Online</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Graph Retrieval</span>
+                    <span class="stat-value">Enabled</span>
+                </div>
+            </div>
+
+            <div id="agents-grid" class="agents-grid">
+                <!-- Agents will be injected here by JS -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Agent Details Modal -->
+    <div id="agent-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modal-agent-name">Agent Name</h2>
+                    <p id="modal-agent-role"
+                        style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.25rem;"></p>
+                    <p id="modal-agent-description"
+                        style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.5rem; font-style: italic;">
+                    </p>
+                </div>
+                <button class="close-btn" onclick="closeModal()" title="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="upload-zone" id="drop-zone">
+                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📤</div>
+                    <p style="font-weight: 500; margin-bottom: 0.25rem;">Drag & drop files here</p>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary);">or click to browse</p>
+                    <input type="file" id="file-input" style="display: none;" multiple>
+                </div>
+
+                <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <h3>Knowledge Base</h3>
+                    <span id="doc-count" style="color: var(--text-secondary); font-size: 0.9rem;">0 documents</span>
+                </div>
+
+                <ul id="doc-list" class="doc-list">
+                    <!-- Documents will be injected here -->
+                </ul>
+
+                <!-- Knowledge Graph Visualization Section -->
+                <div style="margin-top: 2rem;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3>Knowledge Graph</h3>
+                        <button id="refresh-graph-btn" class="btn-icon" title="Refresh Graph" style="display: none;">
+                            🔄
+                        </button>
+                    </div>
+                    <div id="graph-container"
+                        style="min-height: 200px; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; background: var(--bg-secondary);">
+                        <p style="text-align: center; color: var(--text-secondary);">Loading graph...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js?v=2"></script>
+    <script src="js/agents.js?v=2"></script>
+</body>
+
+</html>

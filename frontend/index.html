@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSA</title>
+    <link rel="icon" type="image/png" href="modeling.png">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Google+Sans:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+    <!-- Material Symbols -->
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <style>
+        :root {
+            --bg-body: #131314;
+            --bg-sidebar: #1e1f20;
+            --bg-surface: #1e1f20;
+            --bg-user-bubble: #282a2c;
+            /* Dark grey bubble */
+            --text-primary: #e3e3e3;
+            --text-secondary: #c4c7c5;
+            --accent-blue: #a8c7fa;
+            --border-subtle: #444746;
+            --input-bg: #1e1f20;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Google Sans', 'Roboto', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background-color: var(--bg-sidebar);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+            z-index: 100;
+            position: fixed;
+            height: 100%;
+            left: 0;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .menu-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+        }
+
+        .menu-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .new-chat-btn {
+            margin: 0 16px 20px;
+            background-color: #1a1a1a;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 14px;
+        }
+
+        .new-chat-btn:hover {
+            background-color: #2b2b2b;
+            color: var(--text-primary);
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 16px;
+        }
+
+        .nav-section-title {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin: 24px 0 8px 12px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            color: var(--text-primary);
+            text-decoration: none;
+            border-radius: 24px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .nav-item .material-symbols-outlined {
+            font-size: 20px;
+            color: var(--text-secondary);
+        }
+
+        /* Main Chat Area */
+        .main-content {
+            flex: 1;
+            margin-left: 0;
+            /* Adjusted dynamically via JS or media query */
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: margin-left 0.3s ease;
+            width: 100%;
+        }
+
+        .main-content.sidebar-open {
+            margin-left: 280px;
+            width: calc(100% - 280px);
+        }
+
+        .top-bar {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .chat-scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 0 150px;
+            /* Bottom padding for input area */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .welcome-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            width: 100%;
+            padding: 20px;
+            text-align: center;
+            margin-top: 10vh;
+        }
+
+        .welcome-text {
+            font-size: 56px;
+            font-weight: 500;
+            background: linear-gradient(to right, #4285f4, #9b72cb, #d96570);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+            letter-spacing: -1px;
+            line-height: 1.2;
+        }
+
+        .welcome-subtext {
+            font-size: 24px;
+            color: var(--border-subtle);
+            /* Darker grey */
+            margin-bottom: 48px;
+            font-weight: 500;
+        }
+
+        .suggestions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .suggestion-card {
+            background-color: var(--bg-surface);
+            padding: 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.2s;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 100px;
+        }
+
+        .suggestion-card:hover {
+            background-color: #2b2b2b;
+        }
+
+        .suggestion-card p {
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .suggestion-icon {
+            align-self: flex-end;
+            background: #000;
+            padding: 6px;
+            border-radius: 50%;
+            font-size: 16px;
+        }
+
+        /* Messages */
+        .message-row {
+            width: 100%;
+            max-width: 800px;
+            padding: 0 20px;
+            margin-bottom: 24px;
+            display: flex;
+        }
+
+        .message-row.user {
+            justify-content: flex-end;
+        }
+
+        .message-row.assistant {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 80%;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+
+        .user .message-content {
+            background-color: var(--bg-user-bubble);
+            padding: 12px 20px;
+            border-radius: 24px 24px 4px 24px;
+            color: var(--text-primary);
+        }
+
+        .assistant .message-content {
+            background: none;
+            padding: 0;
+            color: var(--text-primary);
+        }
+
+        .assistant-icon {
+            min-width: 32px;
+            height: 32px;
+            margin-right: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .assistant-icon img {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Input Area */
+        .input-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, var(--bg-body) 20%);
+            padding: 20px 20px 40px;
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .input-box {
+            background-color: var(--input-bg);
+            border-radius: 36px;
+            width: 100%;
+            max-width: 800px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: background 0.2s;
+        }
+
+        .input-box:focus-within {
+            background-color: #2b2b2b;
+        }
+
+        .input-action-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .input-action-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        #query-input {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 16px;
+            font-family: inherit;
+            outline: none;
+            padding: 8px 0;
+        }
+
+        #inventory-toggle {
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 12px;
+            border-radius: 16px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        #inventory-toggle.active {
+            background: #1e3a8a;
+            color: #a8c7fa;
+        }
+
+        /* Uploads */
+        .upload-preview-area {
+            max-width: 800px;
+            width: 100%;
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            margin-bottom: 12px;
+            padding: 0 8px;
+        }
+
+        .file-chip {
+            background: #2b2b2b;
+            border: 1px solid var(--border-subtle);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .remove-file {
+            cursor: pointer;
+            color: #e8eaed;
+        }
+
+        /* Markdown Styles & Borders */
+        .assistant .message-content pre {
+            background-color: #2b2b2b;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 12px 0;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            /* Visible white border */
+        }
+
+        .assistant .message-content code {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 14px;
+        }
+
+        .assistant .message-content p {
+            margin-bottom: 12px;
+        }
+
+        .assistant .message-content ul,
+        ol {
+            margin-left: 24px;
+            margin-bottom: 12px;
+        }
+
+        .assistant .message-content a {
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+
+        /* Table Borders */
+        .assistant .message-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 12px 0;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            /* Visible white border */
+        }
+
+        .assistant .message-content th,
+        .assistant .message-content td {
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            /* Visible white border */
+            padding: 10px;
+            text-align: left;
+        }
+
+        .assistant .message-content th {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Message Actions (Copy Btn) */
+        .message-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .message-row:hover .message-actions {
+            opacity: 1;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .action-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        /* Streaming Cursor */
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background-color: var(--text-primary);
+            margin-left: 4px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        /* Loading Overlay */
+        #loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(19, 19, 20, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #333;
+            border-top-color: #a8c7fa;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Custom Scrollbar - Grey and Rounded */
+        /* Webkit browsers (Chrome, Safari, Edge) */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-surface);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #5a5d60;
+            border-radius: 4px;
+            border: 1px solid var(--bg-surface);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6a6d70;
+        }
+
+        ::-webkit-scrollbar-corner {
+            background: var(--bg-surface);
+        }
+
+        /* Firefox */
+        html {
+            scrollbar-width: thin;
+            scrollbar-color: #5a5d60 var(--bg-surface);
+        }
+
+        /* Specific scrollbar for chat container */
+        .chat-scroll-area {
+            scrollbar-width: thin;
+            scrollbar-color: #5a5d60 var(--bg-surface);
+        }
+
+        /* Sidebar scrollbar */
+        .sidebar-nav {
+            scrollbar-width: thin;
+            scrollbar-color: #5a5d60 var(--bg-sidebar);
+        }
+
+        /* Template Cards Styles */
+        .template-card {
+            transition: all 0.2s ease;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .template-card:hover {
+            background-color: #2b2b2b !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border-color: var(--accent-blue);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .main-content.sidebar-open {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <p>Connecting...</p>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <button class="menu-btn" id="sidebar-close">
+                <span class="material-symbols-outlined">menu_open</span>
+            </button>
+        </div>
+
+        <button class="new-chat-btn" onclick="location.reload()">
+            <span class="material-symbols-outlined">add</span>
+            New chat
+        </button>
+
+        <div class="sidebar-nav">
+            <div class="nav-section-title">Quick Links</div>
+            <a href="https://outlook.office.com/mail/" target="_blank" class="nav-item">
+                <span class="material-symbols-outlined">mail</span>
+                Outlook
+            </a>
+            <a href="#" onclick="connectAndOpen('https://gemini.cae.com/gemini/forms/home.aspx')" class="nav-item">
+                <span class="material-symbols-outlined">link</span>
+                Gemini CAE
+            </a>
+            <a href="https://pwne-my.sharepoint.com/:x:/r/personal/technical_pwne_com_my/_layouts/15/Doc.aspx?sourcedoc=%7BF5B813DC-5B9C-40C9-BE6B-848504EA5F58%7D&file=2025%20Technical%20Shift%20Handover.xlsx&action=default&mobileredirect=true"
+                target="_blank" class="nav-item">
+                <span class="material-symbols-outlined">approval_delegation</span>
+                Technical Handover
+            </a>
+            <a href="https://pwne.sharepoint.com/:x:/r/sites/schedule.display/_layouts/15/doc2.aspx?sourcedoc=%7B67226BC1-4A65-4BEC-A185-8C25D70A9B0F%7D&file=PWN%20AW139%20FFS%20BOOKING%202025.xlsx&action=default&mobileredirect=true&DefaultItemOpen=1"
+                target="_blank" class="nav-item">
+                <span class="material-symbols-outlined">calendar_month</span>
+                Simulator Schedule
+            </a>
+
+            <div class="nav-section-title">Inventory</div>
+            <button class="nav-item" onclick="handleQuickAction('/inventory Check inventory levels')">
+                <span class="material-symbols-outlined">inventory_2</span>
+                Check Levels
+            </button>
+            <button class="nav-item" onclick="handleQuickAction('/inventory List low stock items')">
+                <span class="material-symbols-outlined">warning</span>
+                Low Stock
+            </button>
+
+            <div class="nav-section-title">Templates</div>
+            <button class="nav-item" onclick="openTemplatesChat(false)">
+                <span class="material-symbols-outlined">description</span>
+                Browse Templates
+            </button>
+
+            <div class="nav-section-title">Account</div>
+            <button class="nav-item" onclick="logout()" style="color: #ffb4ab;">
+                <span class="material-symbols-outlined" style="color: #ffb4ab;">logout</span>
+                Sign Out
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content sidebar-open" id="main-content">
+        <div class="top-bar">
+            <button class="menu-btn" id="sidebar-toggle" style="display: none;">
+                <span class="material-symbols-outlined">menu</span>
+            </button>
+            <div style="font-weight: 500;">SSA 2.0</div>
+            <div style="width: 40px;"></div> <!-- Spacer -->
+        </div>
+
+        <div class="chat-scroll-area" id="chat-container">
+            <div class="welcome-container" id="welcome-screen">
+                <h1 class="welcome-text">Hello boss</h1>
+                <h2 class="welcome-subtext">How can I help you today?</h2>
+
+                <div class="suggestions-grid">
+                    <div class="suggestion-card" onclick="handleQuickAction('Find DR 3345 and summarize it.')">
+                        <p>Find DR 3345 and summarize it</p>
+                        <span class="material-symbols-outlined suggestion-icon">lightbulb</span>
+                    </div>
+                    <div class="suggestion-card"
+                        onclick="handleQuickAction('Check bookings schedule for 22 November 2025.')">
+                        <p>Check bookings schedule for 22 November 2025</p>
+                        <span class="material-symbols-outlined suggestion-icon">build</span>
+                    </div>
+                    <div class="suggestion-card"
+                        onclick="handleQuickAction('PFD has no display, find related prev DR to help in finding solution.')">
+                        <p>PFD has no display, find related prev DR</p>
+                        <span class="material-symbols-outlined suggestion-icon">description</span>
+                    </div>
+                    <div class="suggestion-card" onclick="handleQuickAction('/inventory Check inventory for fuses')">
+                        <p>Check inventory for fuses</p>
+                        <span class="material-symbols-outlined suggestion-icon">inventory</span>
+                    </div>
+                </div>
+            </div>
+            <div class="chat-wrapper" id="chat-wrapper"
+                style="width: 100%; display: flex; flex-direction: column; align-items: center; display: none;">
+                <!-- Chat messages go here -->
+            </div>
+        </div>
+
+        <div class="input-container">
+            <div class="upload-preview-area" id="upload-preview"></div>
+
+            <div class="input-box">
+                <!-- Removed add button as requested -->
+                <input type="file" id="file-input" multiple style="display: none;">
+
+                <input type="text" id="query-input" placeholder="Ask anything...">
+
+                <button id="inventory-toggle" title="Toggle inventory mode">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">box</span>
+                    INV
+                </button>
+
+                <button class="input-action-btn" id="send-btn">
+                    <span class="material-symbols-outlined">send</span>
+                </button>
+            </div>
+            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 12px;">
+                SSA may display inaccurate info, so double-check its responses.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- State & Config ---
+        const API_KEY = '01HTM6R2E3-HUSAYN-K8Z5W9XG';
+        const API_BASE_URL = 'http://localhost:8001';  // Multi-Agent System API
+        const INVENTORY_API_URL = 'http://172.24.2.220:5000';
+
+        let isStreaming = false;
+        let inventoryModeEnabled = false;
+        let uploadedFiles = [];
+
+        // --- DOM Elements ---
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('main-content');
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const chatWrapper = document.getElementById('chat-wrapper');
+        const queryInput = document.getElementById('query-input');
+        const fileInput = document.getElementById('file-input');
+        const uploadPreview = document.getElementById('upload-preview');
+
+        // --- Initialization ---
+        checkToken();
+        marked.setOptions({ breaks: true, gfm: true });
+
+        // --- Event Listeners ---
+        document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
+        document.getElementById('sidebar-close').addEventListener('click', toggleSidebar);
+
+        document.getElementById('inventory-toggle').addEventListener('click', () => {
+            inventoryModeEnabled = !inventoryModeEnabled;
+            const btn = document.getElementById('inventory-toggle');
+            if (inventoryModeEnabled) {
+                btn.classList.add('active');
+                queryInput.placeholder = "Ask about inventory...";
+            } else {
+                btn.classList.remove('active');
+                queryInput.placeholder = "Ask anything...";
+            }
+        });
+
+        document.getElementById('send-btn').addEventListener('click', () => handleQuery(queryInput.value));
+        queryInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleQuery(queryInput.value);
+        });
+
+        fileInput.addEventListener('change', handleFileSelect);
+
+        // --- UI Functions ---
+        function toggleSidebar() {
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            if (isCollapsed) {
+                sidebar.classList.remove('collapsed');
+                mainContent.classList.add('sidebar-open');
+                document.getElementById('sidebar-toggle').style.display = 'none';
+            } else {
+                sidebar.classList.add('collapsed');
+                mainContent.classList.remove('sidebar-open');
+                document.getElementById('sidebar-toggle').style.display = 'block';
+            }
+        }
+        // Initialize sidebar toggle button visibility
+        toggleSidebar();
+
+        function handleQuickAction(query) {
+            // Strip /inventory prefix for display if present
+            const display = query.replace(/^\/inventory\s*/i, '');
+            queryInput.value = display;
+            handleQuery(query);
+        }
+
+        function showChatUI() {
+            welcomeScreen.style.display = 'none';
+            chatWrapper.style.display = 'flex';
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('chat-container');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function appendUserMessage(text) {
+            showChatUI();
+            const div = document.createElement('div');
+            div.className = 'message-row user';
+            div.innerHTML = `<div class="message-content">${escapeHtml(text)}</div>`;
+            chatWrapper.appendChild(div);
+            scrollToBottom();
+        }
+
+        function appendAssistantMessage() {
+            showChatUI();
+            const row = document.createElement('div');
+            row.className = 'message-row assistant';
+
+            const icon = document.createElement('div');
+            icon.className = 'assistant-icon';
+            // Gemini sparkle icon SVG
+            icon.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="url(#sparkle-gradient)"><defs><linearGradient id="sparkle-gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4285f4"/><stop offset="100%" stop-color="#d96570"/></linearGradient></defs><path d="M10 20l2-8 8-2-8-2-2-8-2 8-8 2 8 2 2 8z" fill="url(#sparkle-gradient)"/></svg>`;
+
+            const contentWrapper = document.createElement('div');
+            contentWrapper.style.width = '100%';
+
+            const content = document.createElement('div');
+            content.className = 'message-content';
+
+            const actions = document.createElement('div');
+            actions.className = 'message-actions';
+
+            // Copy Button
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'action-btn';
+            copyBtn.title = 'Copy';
+            copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">content_copy</span>';
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText(content.innerText).then(() => {
+                    const originalHTML = copyBtn.innerHTML;
+                    copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">check</span>';
+                    setTimeout(() => copyBtn.innerHTML = originalHTML, 2000);
+                });
+            };
+
+            actions.appendChild(copyBtn);
+            contentWrapper.appendChild(content);
+            contentWrapper.appendChild(actions);
+
+            row.appendChild(icon);
+            row.appendChild(contentWrapper);
+            chatWrapper.appendChild(row);
+            scrollToBottom();
+            return content;
+        }
+
+        // --- Logic Functions ---
+        // === Modified handleQuery Function ===
+        async function handleQuery(query) {
+            if (!query.trim() && uploadedFiles.length === 0) return;
+            if (isStreaming) return;
+
+            const actualQuery = inventoryModeEnabled && !query.toLowerCase().startsWith('/inventory')
+                ? `/inventory ${query}`
+                : query;
+
+            // === TEMPLATE DETECTION (More specific) ===
+            // Only trigger if query explicitly asks to "show", "list", "browse", or "see" templates
+            const explicitTemplatePatterns = [
+                /show\s+(me\s+)?(available\s+)?templates/i,
+                /list\s+(available\s+)?templates/i,
+                /browse\s+templates/i,
+                /see\s+templates/i,
+                /view\s+templates/i,
+                /^templates$/i  // Just the word "templates" alone
+            ];
+
+            const isExplicitTemplateRequest = explicitTemplatePatterns.some(pattern =>
+                pattern.test(actualQuery)
+            );
+
+            if (isExplicitTemplateRequest) {
+                appendUserMessage(query);
+                queryInput.value = '';
+                openTemplatesChat(true);
+                return;
+            }
+
+            appendUserMessage(query);
+            queryInput.value = '';
+            isStreaming = true;
+
+            // === STEP 1: Check if this is a DR query ===
+            const drDetection = detectDRQuery(actualQuery);
+
+            console.log('🔍 Detection result:', drDetection); // DEBUG
+
+            if (drDetection.isDR && drDetection.drNumbers && drDetection.drNumbers.length > 0) {
+                console.log(`🔍 DR query detected: ${drDetection.drNumbers.join(', ')}`);
+
+                const msgContent = appendAssistantMessage();
+                msgContent.innerHTML = '<div class="cursor"></div>';
+
+                // === STEP 2: Lookup DR(s) ===
+                try {
+                    const drLookup = await lookupDR(actualQuery);
+
+                    console.log('📦 Lookup result:', {
+                        found: drLookup.found,
+                        matched: drLookup.matched_count,
+                        requested: drDetection.drNumbers.length
+                    }); // DEBUG
+
+                    if (drLookup.found && drLookup.formatted_context) {
+                        console.log(`✅ Found ${drLookup.matched_count} of ${drDetection.drNumbers.length} requested DR(s)`);
+
+                        // === STEP 3: Enhanced query with MIX mode ===
+                        const enhancedQuery = `CRITICAL INSTRUCTION: I have retrieved EXACT deficiency records from the database. Use this as your PRIMARY and AUTHORITATIVE source.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXACT DATABASE RECORDS (DO NOT IGNORE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${drLookup.formatted_context}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+END OF EXACT RECORDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Requested DRs: ${drDetection.drNumbers.join(', ')}
+Found in database: ${drLookup.matched_count}
+
+User's question: ${actualQuery}
+
+STRICT INSTRUCTIONS:
+1. The records above are EXACT data from the database - treat them as 100% authoritative
+2. For each DR number the user asked about:
+   - If it's in the exact records above: Use that data
+   - If it's NOT in the exact records above: Explicitly state "DR #XXXX was not found in the database"
+3. DO NOT make up or hallucinate information about missing DRs
+4. You may add related context from your search, but clearly mark it as "Additional context" or "Related information"
+5. Always distinguish between:
+   ✓ Information from the exact records above
+   ✗ Information from vector search/additional context
+
+Answer comprehensively and accurately:`;
+
+                        const response = await fetch(`${API_BASE_URL}/query`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-API-Key': API_KEY
+                            },
+                            body: JSON.stringify({
+                                query: enhancedQuery,
+                                mode: 'mix',  // MIX mode for best results
+                                stream: true
+                            })
+                        });
+
+                        // === STEP 4: Stream response ===
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder();
+                        let buffer = '';
+
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+
+                            const chunk = decoder.decode(value, { stream: true });
+                            const lines = chunk.split('\n');
+
+                            for (const line of lines) {
+                                if (!line.trim()) continue;
+                                try {
+                                    const json = JSON.parse(line);
+                                    if (json.response) {
+                                        buffer += json.response;
+
+                                        // Filter <think> tags
+                                        let cleanText = buffer.replace(/<think>[\s\S]*?<\/think>/g, '');
+                                        if (cleanText.indexOf('<think>') !== -1) {
+                                            cleanText = cleanText.split('<think>')[0];
+                                        }
+
+                                        msgContent.innerHTML = marked.parse(cleanText);
+                                    }
+                                } catch (e) {
+                                    console.error('Parse error:', e);
+                                }
+                            }
+                            scrollToBottom();
+                        }
+
+                        isStreaming = false;
+                        return;
+
+                    } else {
+                        // No records found
+                        const requestedList = drDetection.drNumbers.join(', #');
+                        msgContent.innerHTML = marked.parse(
+                            `⚠️ I couldn't find any deficiency records for DR #${requestedList} in the database. 
+
+Please verify the DR number(s) and try again. 
+
+💡 Tip: Make sure the DR numbers are correct and exist in the system.`
+                        );
+                        isStreaming = false;
+                        return;
+                    }
+                } catch (error) {
+                    msgContent.innerHTML = `❌ Error looking up DR records: ${error.message}`;
+                    console.error('DR lookup error:', error);
+                    isStreaming = false;
+                    return;
+                }
+            }
+
+            // === Handle Inventory (existing code) ===
+            if (actualQuery.toLowerCase().includes('/inventory')) {
+                const msgContent = appendAssistantMessage();
+                msgContent.innerHTML = '<div class="cursor"></div>';
+
+                try {
+                    const res = await fetch(`${INVENTORY_API_URL}/inventory/query`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: actualQuery })
+                    });
+                    const data = await res.json();
+                    msgContent.innerHTML = marked.parse(data.response || data.message || 'Done.');
+                } catch (e) {
+                    msgContent.innerHTML = `Error: ${e.message}`;
+                }
+                isStreaming = false;
+                return;
+            }
+
+            // === Handle General Chat (existing code) ===
+            const msgContent = appendAssistantMessage();
+            let buffer = '';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': API_KEY
+                    },
+                    body: JSON.stringify({
+                        query: actualQuery,
+                        mode: 'mix',
+                        stream: true
+                    })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+                        try {
+                            const json = JSON.parse(line);
+                            if (json.response) {
+                                buffer += json.response;
+
+                                // Filter <think> tags
+                                let cleanText = buffer.replace(/<think>[\s\S]*?<\/think>/g, '');
+                                if (cleanText.indexOf('<think>') !== -1) {
+                                    cleanText = cleanText.split('<think>')[0];
+                                }
+
+                                msgContent.innerHTML = marked.parse(cleanText);
+                            }
+                        } catch (e) { }
+                    }
+                    scrollToBottom();
+                }
+            } catch (e) {
+                msgContent.innerHTML = `Error: ${e.message}`;
+            }
+            isStreaming = false;
+        }
+        async function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            for (const file of files) {
+                // UI Update
+                const chip = document.createElement('div');
+                chip.className = 'file-chip';
+                chip.innerHTML = `<span>${file.name}</span> <span class="remove-file" onclick="this.parentElement.remove()">×</span>`;
+                uploadPreview.appendChild(chip);
+
+                // Upload Logic
+                const formData = new FormData();
+                formData.append('file', file);
+                try {
+                    await fetch(`${API_BASE_URL}/documents/upload`, {
+                        method: 'POST',
+                        headers: { 'X-API-Key': API_KEY },
+                        body: formData
+                    });
+                    // Success indication
+                    chip.style.borderColor = '#10a37f';
+                } catch (e) {
+                    chip.style.borderColor = '#cf222e';
+                }
+            }
+        }
+
+        // --- Auth & Helpers ---
+        function logout() {
+            localStorage.removeItem("jwt_token");
+            window.location.href = "login.html";
+        }
+
+        function checkToken() {
+            const token = localStorage.getItem("jwt_token");
+            if (!token) window.location.href = "login.html";
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function connectAndOpen(url) {
+            const overlay = document.getElementById("loading-overlay");
+            overlay.style.display = "flex";
+            try {
+                const res = await fetch("http://127.0.0.1:5004/connect");
+                const data = await res.json();
+                if (data.connected) {
+                    setTimeout(() => {
+                        overlay.style.display = "none";
+                        window.open(url, "_blank");
+                    }, 1000);
+                }
+            } catch (e) {
+                overlay.style.display = "none";
+                alert("Connection failed");
+            }
+        }
+
+        function openTemplatesChat(fromHandleQuery = false) {
+            showChatUI();
+
+            // Only add user message if not called from handleQuery (to avoid duplicate)
+            if (!fromHandleQuery) {
+                const userMessage = document.createElement('div');
+                userMessage.className = 'message-row user';
+                userMessage.innerHTML = `<div class="message-content">Show me available templates</div>`;
+                chatWrapper.appendChild(userMessage);
+            }
+
+            // Add assistant response with templates
+            const msgContent = appendAssistantMessage();
+
+            // Simulate AI typing with templates
+            msgContent.innerHTML = '<div class="cursor"></div>';
+
+            setTimeout(() => {
+                msgContent.innerHTML = `
+                    <h3 style="margin-bottom: 16px; color: var(--accent-blue);">📋 Available Templates</h3>
+                    <p style="margin-bottom: 20px; color: var(--text-secondary);">Click on any template below to copy it to your clipboard and start a new conversation.</p>
+                    
+                    <div class="templates-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-bottom: 20px;">
+                        <div class="template-card" onclick="copyTemplate(this)" data-template="Good morning team, this is your daily morning readiness report:
+
+**System Status:**
+- All systems operational ✅
+- No outstanding issues
+- Inventory levels checked and adequate
+
+**Today's Schedule:**
+- [Add your schedule details here]
+
+**Action Items:**
+- [Add any action items here]
+
+**Prepared by:** [Your Name]
+**Date:** ${new Date().toLocaleDateString()}" style="background-color: var(--bg-surface); padding: 16px; border-radius: 12px; cursor: pointer; transition: background 0.2s;">
+                            <h4 style="margin-bottom: 8px; color: var(--text-primary);">🌅 Morning Readiness</h4>
+                            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 8px;">Daily morning status report template</p>
+                            <div style="font-size: 12px; color: var(--accent-blue);">Click to copy</div>
+                        </div>
+                        
+                        <div class="template-card" onclick="copyTemplate(this)" data-template="Subject: System Downtime Notification
+
+Dear Team,
+
+I am writing to inform you of an upcoming system downtime:
+
+**Details:**
+- **System:** [System Name]
+- **Start Time:** [Date and Time]
+- **End Time:** [Date and Time]  
+- **Duration:** [Expected Duration]
+- **Impact:** [Description of impact]
+
+**Reason:** [Brief explanation]
+
+**Mitigation:** [Any mitigation steps]
+
+We apologize for any inconvenience this may cause. Updates will be provided as needed.
+
+**Contact:** [Your contact information]
+
+Best regards,
+[Your Name]" style="background-color: var(--bg-surface); padding: 16px; border-radius: 12px; cursor: pointer; transition: background 0.2s;">
+                            <h4 style="margin-bottom: 8px; color: var(--text-primary);">⚠️ Downtime Email</h4>
+                            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 8px;">System downtime notification template</p>
+                            <div style="font-size: 12px; color: var(--accent-blue);">Click to copy</div>
+                        </div>
+                        
+                        <div class="template-card" onclick="copyTemplate(this)" data-template="**Daily Inventory Check Report**
+
+**Date:** ${new Date().toLocaleDateString()}
+
+**Inventory Summary:**
+- Total Items: [Number]
+- Low Stock Items: [Number] ⚠️
+- Critical Items: [Number] 🔴
+- Out of Stock: [Number] ❌
+
+**Items Requiring Attention:**
+- [List critical/low stock items]
+- [Include part numbers and quantities]
+
+**Action Required:**
+- [ ] Reorder [Item Name] - Current: [Qty], Minimum: [Min Qty]
+- [ ] [Add other actions as needed]
+
+**Notes:**
+[Any additional notes or observations]
+
+**Reviewed by:** [Your Name]" style="background-color: var(--bg-surface); padding: 16px; border-radius: 12px; cursor: pointer; transition: background 0.2s;">
+                            <h4 style="margin-bottom: 8px; color: var(--text-primary);">📦 Inventory Report</h4>
+                            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 8px;">Daily inventory check template</p>
+                            <div style="font-size: 12px; color: var(--accent-blue);">Click to copy</div>
+                        </div>
+                        
+                        <div class="template-card" onclick="copyTemplate(this)" data-template="**Deficiency Report Summary**
+
+**DR Number:** #[Number]
+**Date:** ${new Date().toLocaleDateString()}
+**Reported by:** [Your Name]
+
+**Issue Description:**
+[Brief description of the deficiency]
+
+**Aircraft/Equipment:** [Aircraft Type/Equipment ID]
+**Location:** [Where issue was found]
+
+**Status:** 
+- [ ] Open
+- [ ] In Progress  
+- [ ] Resolved
+- [ ] Closed
+
+**Priority:** [High/Medium/Low]
+
+**Notes:**
+[Any additional information]
+
+**Next Steps:**
+[Action items or follow-up required]" style="background-color: var(--bg-surface); padding: 16px; border-radius: 12px; cursor: pointer; transition: background 0.2s;">
+                            <h4 style="margin-bottom: 8px; color: var(--text-primary);">📋 DR Summary</h4>
+                            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 8px;">Deficiency report template</p>
+                            <div style="font-size: 12px; color: var(--accent-blue);">Click to copy</div>
+                        </div>
+                    </div>
+                    
+                    <div style="background-color: rgba(255,255,255,0.05); padding: 16px; border-radius: 8px; margin-top: 16px;">
+                        <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 8px;">💡 <strong>How to use:</strong></p>
+                        <ol style="margin-left: 20px; color: var(--text-secondary); font-size: 14px;">
+                            <li>Click on any template above to copy it</li>
+                            <li>Paste it in the chat input below</li>
+                            <li>Customize with your specific information</li>
+                            <li>Send to start your conversation</li>
+                        </ol>
+                    </div>
+                `;
+                scrollToBottom();
+            }, 800);
+        }
+
+        function copyTemplate(element) {
+            const template = element.getAttribute('data-template');
+            navigator.clipboard.writeText(template).then(() => {
+                // Show feedback
+                const originalHTML = element.innerHTML;
+                element.style.backgroundColor = '#1e3a8a';
+                element.innerHTML = `
+                    <h4 style="margin-bottom: 8px; color: #a8c7fa;">✅ Copied!</h4>
+                    <p style="font-size: 14px; color: #a8c7fa; margin-bottom: 8px;">Template copied to clipboard</p>
+                    <div style="font-size: 12px; color: #a8c7fa;">Paste in chat to use</div>
+                `;
+                setTimeout(() => {
+                    element.style.backgroundColor = 'var(--bg-surface)';
+                    element.innerHTML = originalHTML;
+                }, 2000);
+            });
+        }
+
+        // === Configuration ===
+        const DR_LOOKUP_API_URL = 'http://172.24.2.220:5022';  // Your DR lookup service
+
+        // === DR Number Detection & Extraction ===
+        // === DR Number Detection & Extraction ===
+        function detectDRQuery(query) {
+            /**
+             * Detect if query contains DR number reference(s)
+             * Returns: { isDR: boolean, drNumbers: string[], sites: string[]|null }
+             */
+            const query_lower = query.toLowerCase();
+
+            // Patterns to detect DR queries
+            const patterns = [
+                /\b(?:dr|deficiency)\s*#?\s*(\d+)\b/gi,
+                /\b(?:number|no\.?|num)\s*#?\s*(\d+)\b/gi,
+                /#\s*(\d+)\b/g,  // Just #123
+            ];
+
+            let drNumbers = [];
+
+            // Extract ALL DR numbers
+            for (const pattern of patterns) {
+                const matches = [...query.matchAll(pattern)];
+                drNumbers.push(...matches.map(m => m[1]));
+            }
+
+            // Remove duplicates
+            drNumbers = [...new Set(drNumbers)];
+
+            if (drNumbers.length === 0) {
+                return { isDR: false, drNumbers: [], sites: null };
+            }
+
+            // Extract site names (2-5 uppercase letters)
+            const sitePattern = /\b([A-Z]{2,5})\b/g;
+            const siteMatches = [...query.matchAll(sitePattern)].map(m => m[1]);
+
+            // Filter out common false positives
+            const excluded = new Set(['DR', 'PM', 'ID', 'NO', 'AND', 'OR']);
+            const sites = siteMatches.filter(s => !excluded.has(s));
+
+            return {
+                isDR: true,
+                drNumbers: drNumbers,  // Array of numbers!
+                sites: sites.length > 0 ? sites : null
+            };
+        }
+        // === DR Lookup Function ===
+        // === DR Lookup Function ===
+        async function lookupDR(query) {
+            /**
+             * Call DR lookup service
+             * Returns: { found: boolean, formatted_context: string, ... }
+             */
+            try {
+                console.log('🔍 Making DR lookup request:', query); // Debug log
+
+                const response = await fetch(`${DR_LOOKUP_API_URL}/lookup/dr`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`DR lookup failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('📦 DR lookup response:', { // Debug log
+                    found: data.found,
+                    matched_count: data.matched_count,
+                    dr_number: data.dr_number,
+                    has_context: !!data.formatted_context
+                });
+
+                return data;
+
+            } catch (error) {
+                console.error('DR lookup error:', error);
+                return {
+                    found: false,
+                    error: error.message
+                };
+            }
+        }
+    </script>
+</body>
+
+</html>

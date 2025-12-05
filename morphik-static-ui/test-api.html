@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 2rem;
+            background: #0a0a0a;
+            color: #ededed;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            margin: 0.5rem;
+            cursor: pointer;
+        }
+
+        #output {
+            background: #171717;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Morphik API Test</h1>
+
+    <div>
+        <button onclick="testListDocuments()">Test List Documents (computer_kb)</button>
+        <button onclick="testUpload()">Test Upload File</button>
+        <button onclick="clearOutput()">Clear Output</button>
+    </div>
+
+    <div id="output"></div>
+
+    <script src="js/api.js"></script>
+    <script>
+        const output = document.getElementById('output');
+
+        function log(message) {
+            output.textContent += message + '\n';
+            console.log(message);
+        }
+
+        function clearOutput() {
+            output.textContent = '';
+        }
+
+        async function testListDocuments() {
+            log('\n=== Testing List Documents ===');
+            try {
+                log('Calling api.listDocuments("computer_kb")...');
+                const result = await api.listDocuments('computer_kb');
+                log('Success!');
+                log('Returned count: ' + result.returned_count);
+                log('Documents: ' + JSON.stringify(result.documents, null, 2));
+            } catch (error) {
+                log('ERROR: ' + error.message);
+                log('Stack: ' + error.stack);
+            }
+        }
+
+        async function testUpload() {
+            log('\n=== Testing File Upload ===');
+
+            // Create a test file
+            const testContent = 'This is a test document for API verification.\nTimestamp: ' + new Date().toISOString();
+            const blob = new Blob([testContent], { type: 'text/plain' });
+            const file = new File([blob], 'test-upload.txt', { type: 'text/plain' });
+
+            try {
+                log('Uploading test file to computer_kb...');
+                const result = await api.ingestFile(file, 'computer_kb');
+                log('Success!');
+                log('Document ID: ' + (result.external_id || result.id));
+                log('Response: ' + JSON.stringify(result, null, 2));
+            } catch (error) {
+                log('ERROR: ' + error.message);
+                log('Stack: ' + error.stack);
+            }
+        }
+    </script>
+</body>
+
+</html>

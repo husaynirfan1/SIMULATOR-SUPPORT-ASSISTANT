@@ -1,0 +1,307 @@
+# Morphik Documentation
+
+## Docs
+
+- [Batch Get Chunks](https://morphik.ai/docs/api-reference/batch-get-chunks.md): Retrieve specific chunks by their document ID and chunk number in a single batch operation.
+- [Batch Get Documents](https://morphik.ai/docs/api-reference/batch-get-documents.md): Retrieve multiple documents by their IDs in a single batch operation.
+- [Delete Cloud App](https://morphik.ai/docs/api-reference/delete-cloud-app.md): Delete all resources associated with a given cloud application.
+- [Complete Document Chat](https://morphik.ai/docs/api-reference/document/complete-document-chat.md): Stream a chat completion response for a document chat conversation.
+- [Get Document Chat History](https://morphik.ai/docs/api-reference/document/get-document-chat-history.md): Retrieve the message history for a document chat conversation.
+- [Delete Document](https://morphik.ai/docs/api-reference/documents/delete-document.md): Delete a document and all associated data.
+
+This endpoint deletes a document and all its associated data, including:
+- Document metadata
+- Document content in storage
+- Document chunks and embeddings in vector store
+- [Download Document File](https://morphik.ai/docs/api-reference/documents/download-document-file.md): Download the actual file content for a document.
+This endpoint is used for local storage when file:// URLs cannot be accessed by browsers.
+- [Extract Document Pages](https://morphik.ai/docs/api-reference/documents/extract-document-pages.md): Extract specific pages from a document (PDF, PowerPoint, or Word) as base64-encoded images.
+- [Get Document](https://morphik.ai/docs/api-reference/documents/get-document.md): Retrieve a single document by its external identifier.
+
+Returns the :class:`Document` metadata if found or raises 404.
+- [Get Document By Filename](https://morphik.ai/docs/api-reference/documents/get-document-by-filename.md): Get document by filename.
+- [Get Document Download Url](https://morphik.ai/docs/api-reference/documents/get-document-download-url.md): Get a download URL for a specific document.
+- [Get Document Status](https://morphik.ai/docs/api-reference/documents/get-document-status.md): Get the processing status of a document.
+- [List Docs](https://morphik.ai/docs/api-reference/documents/list-docs.md): Flexible document listing with aggregates, projections, and advanced pagination.
+
+**Supported operators**: `$and`, `$or`, `$nor`, `$not`, `$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`,
+`$in`, `$nin`, `$exists`, `$type`, `$regex`, `$contains`.
+
+**Implicit equality** (backwards compatible, JSONB containment):
+```json
+{"status": "active"}
+```
+
+**Explicit operators** (typed comparisons for number, decimal, datetime, date):
+```json
+{"priority": {"$gte": 40}, "end_date": {"$lt": "2025-01-01"}}
+```
+
+Use `folder_name` and `end_user_id` query parameters to scope system metadata.
+- [List Documents](https://morphik.ai/docs/api-reference/documents/list-documents.md): List accessible documents with metadata filtering.
+
+**Supported operators**: `$and`, `$or`, `$nor`, `$not`, `$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`,
+`$in`, `$nin`, `$exists`, `$type`, `$regex`, `$contains`.
+
+**Implicit equality** (backwards compatible):
+```json
+{"status": "active"}
+```
+Uses JSONB containment, matches scalars inside arrays, JSON-serializable types only.
+
+**Explicit operators** (typed comparisons):
+```json
+{"priority": {"$eq": 42}, "created_date": {"$gte": "2024-01-01T00:00:00Z"}}
+```
+Supports typed metadata (number, decimal, datetime, date) with safe casting.
+- [Update Document File](https://morphik.ai/docs/api-reference/documents/update-document-file.md): Update a document with content from a file using the specified strategy.
+- [Update Document Metadata](https://morphik.ai/docs/api-reference/documents/update-document-metadata.md): Update only a document's metadata.
+- [Update Document Text](https://morphik.ai/docs/api-reference/documents/update-document-text.md): Update a document with new text content using the specified strategy.
+- [Connector Oauth Callback](https://morphik.ai/docs/api-reference/ee--connectors/connector-oauth-callback.md): Handles the OAuth 2.0 callback from the authentication provider.
+Validates state, finalizes authentication, and stores credentials.
+- [Disconnect](https://morphik.ai/docs/api-reference/ee--connectors/disconnect.md): Disconnect from a connector and remove credentials.
+- [Finalize Auth](https://morphik.ai/docs/api-reference/ee--connectors/finalize-auth.md): Finalize the OAuth flow and exchange the code for a token.
+- [Finalize Manual Auth](https://morphik.ai/docs/api-reference/ee--connectors/finalize-manual-auth.md): Finalize authentication using manual credentials.
+
+This endpoint is used for connectors that require manual credential input
+(like Zotero) instead of OAuth flows.
+- [Get Auth Status For Connector](https://morphik.ai/docs/api-reference/ee--connectors/get-auth-status-for-connector.md): Checks the current authentication status for the given connector type.
+- [Get Initiate Auth Url](https://morphik.ai/docs/api-reference/ee--connectors/get-initiate-auth-url.md): Return the provider's *authorization_url* for the given connector.
+
+The method mirrors the logic of the `/auth/initiate` endpoint but sends a
+JSON payload instead of a redirect so that browsers can stay on the same
+origin until they intentionally navigate away.
+
+For OAuth-based connectors, this returns authorization_url.
+For manual credential connectors, this returns the credential form specification.
+- [Get Status](https://morphik.ai/docs/api-reference/ee--connectors/get-status.md): Get the authentication status for a connector.
+- [Ingest File](https://morphik.ai/docs/api-reference/ee--connectors/ingest-file.md): Ingest a single file from a connector.
+- [Ingest Repository](https://morphik.ai/docs/api-reference/ee--connectors/ingest-repository.md): Ingest an entire GitHub repository.
+- [Initiate Auth](https://morphik.ai/docs/api-reference/ee--connectors/initiate-auth.md): Initiate the OAuth flow for a connector.
+- [List Files](https://morphik.ai/docs/api-reference/ee--connectors/list-files.md): List files from a connector.
+- [List Files For Connector](https://morphik.ai/docs/api-reference/ee--connectors/list-files-for-connector.md): Lists files and folders from the specified connector.
+- [Add Document To Folder](https://morphik.ai/docs/api-reference/folders/add-document-to-folder.md): Add a document to a folder.
+- [Create Folder](https://morphik.ai/docs/api-reference/folders/create-folder.md): Create a new folder.
+- [Delete Folder](https://morphik.ai/docs/api-reference/folders/delete-folder.md): Delete a folder and all associated documents.
+- [Folder Details](https://morphik.ai/docs/api-reference/folders/folder-details.md): Retrieve folder metadata with optional document statistics and projections.
+- [Get Folder](https://morphik.ai/docs/api-reference/folders/get-folder.md): Get a folder by ID or name.
+- [List Folder Summaries](https://morphik.ai/docs/api-reference/folders/list-folder-summaries.md): Return compact folder list (id, name, doc_count, updated_at).
+- [List Folders](https://morphik.ai/docs/api-reference/folders/list-folders.md): List all folders the user has access to.
+- [Remove Document From Folder](https://morphik.ai/docs/api-reference/folders/remove-document-from-folder.md): Remove a document from a folder.
+- [Generate Cloud Uri](https://morphik.ai/docs/api-reference/generate-cloud-uri.md): Generate an authenticated URI for a cloud-hosted Morphik application.
+- [Generate Local Uri](https://morphik.ai/docs/api-reference/generate-local-uri.md): Generate a development URI for running Morphik locally.
+- [Get Available Models](https://morphik.ai/docs/api-reference/get-available-models.md): Get list of available models from configuration.
+
+Returns models grouped by type (chat, embedding, etc.) with their metadata.
+- [Get Available Models For Selection](https://morphik.ai/docs/api-reference/get-available-models-for-selection.md): Get list of available models for UI selection.
+
+Returns a list of models that can be used for queries. Each model includes:
+- id: Model identifier to use in llm_config
+- name: Display name for the model
+- provider: The LLM provider (e.g., openai, anthropic, ollama)
+- description: Optional description of the model
+- [Get Chat History](https://morphik.ai/docs/api-reference/get-chat-history.md): Retrieve the message history for a chat conversation.
+- [Getting Started with Morphik API](https://morphik.ai/docs/api-reference/getting-started.md): Quick guide to start using the Morphik API
+- [Check Workflow Status](https://morphik.ai/docs/api-reference/graph/check-workflow-status.md): Check the status of a graph build/update workflow.
+
+This endpoint polls the external graph API to check the status of an async operation.
+- [Create Graph](https://morphik.ai/docs/api-reference/graph/create-graph.md): Create a new graph based on document contents.
+
+The graph is created asynchronously. A stub graph record is returned with
+``status = "processing"`` while a background task extracts entities and
+relationships.
+- [Delete Graph](https://morphik.ai/docs/api-reference/graph/delete-graph.md): Delete a graph by name.
+- [Get Graph](https://morphik.ai/docs/api-reference/graph/get-graph.md): Get a graph by name.
+
+This endpoint retrieves a graph by its name if the user has access to it.
+- [Get Graph Status](https://morphik.ai/docs/api-reference/graph/get-graph-status.md): Lightweight endpoint to check graph status with automatic status synchronization.
+
+This endpoint is designed for polling during graph creation/update operations.
+For MorphikGraphService backends, it synchronizes the local graph status with
+the remote service status automatically.
+- [Get Graph Visualization](https://morphik.ai/docs/api-reference/graph/get-graph-visualization.md): Get graph visualization data.
+
+This endpoint retrieves the nodes and links data needed for graph visualization.
+It works with both local and API-based graph services.
+- [List Graphs](https://morphik.ai/docs/api-reference/graph/list-graphs.md): List all graphs the user has access to.
+
+This endpoint retrieves all graphs the user has access to.
+- [Update Graph](https://morphik.ai/docs/api-reference/graph/update-graph.md): Update an existing graph with new documents.
+
+This endpoint processes additional documents based on the original graph filters
+and/or new filters/document IDs, extracts entities and relationships, and
+updates the graph with new information.
+- [Health Check](https://morphik.ai/docs/api-reference/health/health-check.md): Comprehensive health check endpoint that queries all underlying services.
+
+Checks the following services:
+- PostgreSQL database
+- Redis
+- PGVector store
+- Storage service (Local/S3)
+- ColPali vector store (if enabled)
+- [Ping Health](https://morphik.ai/docs/api-reference/health/ping-health.md): Simple health check endpoint that returns 200 OK.
+- [Batch Ingest Files](https://morphik.ai/docs/api-reference/ingestion/batch-ingest-files.md): Batch ingest **multiple files** (async).
+
+Each file is treated the same as :func:`ingest_file` but sharing the same
+request avoids many round-trips. All heavy work is still delegated to the
+background worker pool.
+- [Ingest File](https://morphik.ai/docs/api-reference/ingestion/ingest-file.md): Ingest a **file** asynchronously.
+
+The file is uploaded to object storage, a *Document* stub is persisted
+with ``status='processing'`` and a background worker picks up the heavy
+parsing / chunking work.
+- [Ingest Text](https://morphik.ai/docs/api-reference/ingestion/ingest-text.md): Ingest a **text** document.
+- [Query Document](https://morphik.ai/docs/api-reference/ingestion/query-document.md): Execute a one-off analysis for a document using Morphik On-the-Fly, optionally enforcing structured output and
+scheduling a follow-up ingestion.
+
+`ingestion_options` is a JSON string controlling post-analysis ingestion behaviour via keys such as `ingest`,
+`metadata`, `use_colpali`, `folder_name`, and `end_user_id`. Additional keys are ignored. A
+:class:`DocumentQueryResponse` describing the inline analysis and any queued ingestion is returned.
+- [Requeue Ingest Jobs](https://morphik.ai/docs/api-reference/ingestion/requeue-ingest-jobs.md): Requeue ingestion jobs for documents stuck in processing or marked as failed.
+- [List Chat Conversations](https://morphik.ai/docs/api-reference/list-chat-conversations.md): List chat conversations available to the current user.
+- [List Cloud Apps](https://morphik.ai/docs/api-reference/list-cloud-apps.md): List provisioned apps for the specified organization/user.
+- [Get Logs](https://morphik.ai/docs/api-reference/logs/get-logs.md): Return recent logs for the authenticated user (scoped by app_id).
+
+Args:
+    hours: Number of hours of history to retrieve (default 4)
+           - <= 4 hours: reads from local files
+           - > 4 hours: queries logs.morphik.ai proxy (requires proxy endpoint)
+- [Morphik Management API](https://morphik.ai/docs/api-reference/management-api.md): Learn how to provision and manage isolated Morphik application environments.
+- [Create Custom Model](https://morphik.ai/docs/api-reference/model-config/create-custom-model.md): Create a new custom model.
+- [Create Model Config](https://morphik.ai/docs/api-reference/model-config/create-model-config.md): Create a new model configuration.
+- [Delete Model Config](https://morphik.ai/docs/api-reference/model-config/delete-model-config.md): Delete a model configuration.
+- [Get Model Config](https://morphik.ai/docs/api-reference/model-config/get-model-config.md): Get a specific model configuration.
+- [List Custom Models](https://morphik.ai/docs/api-reference/model-config/list-custom-models.md): List all custom models for the authenticated user.
+- [List Model Configs](https://morphik.ai/docs/api-reference/model-config/list-model-configs.md): List all model configurations for the authenticated user and app.
+- [Update Model Config](https://morphik.ai/docs/api-reference/model-config/update-model-config.md): Update an existing model configuration.
+- [Delete Model](https://morphik.ai/docs/api-reference/models/delete-model.md): Delete a custom model.
+- [List Api Keys](https://morphik.ai/docs/api-reference/models/list-api-keys.md): List all configured API keys (sanitized).
+- [List Custom Models](https://morphik.ai/docs/api-reference/models/list-custom-models.md): List all custom models for the authenticated user.
+- [Save Api Key](https://morphik.ai/docs/api-reference/models/save-api-key.md): Save API key for a provider.
+- [Save Model](https://morphik.ai/docs/api-reference/models/save-model.md): Save a custom model configuration.
+- [Query Completion](https://morphik.ai/docs/api-reference/query-completion.md): Generate completion using relevant chunks as context.
+
+When graph_name is provided, the query will leverage the knowledge graph
+to enhance retrieval by finding relevant entities and their connected documents.
+- [Retrieve Chunks](https://morphik.ai/docs/api-reference/retrieve-chunks.md): Retrieve relevant chunks.
+
+The optional `request.filters` payload accepts equality checks (which also match scalars inside JSON arrays)
+plus the logical operators `$and`, `$or`, `$nor`, and `$not`. Field-level predicates include `$eq`, `$ne`,
+`$in`, `$nin`, `$exists`, `$type`, `$regex`, `$contains`, and the comparison operators `$gt`, `$gte`, `$lt`,
+and `$lte`. Comparison clauses evaluate typed metadata (`number`, `decimal`, `datetime`, or `date`) and
+raise detailed validation errors when operands cannot be coerced. Regex filters allow the optional `i` flag
+for case-insensitive matching, while `$contains` performs substring checks (case-insensitive by default,
+configurable via `case_sensitive`). Filters can be nested freely, for example:
+
+```json
+{
+  "$and": [
+    {"category": "policy"},
+    {"$or": [{"region": "emea"}, {"priority": {"$in": ["p0", "p1"]}}]}
+  ]
+}
+```
+Returns a list of `ChunkResult` objects ordered by relevance.
+- [Retrieve Chunks Grouped](https://morphik.ai/docs/api-reference/retrieve-chunks-grouped.md): Retrieve relevant chunks with grouped response format.
+
+Uses the same filter operators as `/retrieve/chunks` (equality, `$eq/$ne`, `$gt/$gte/$lt/$lte`, `$in/$nin`,
+`$exists`, `$type`, `$regex`, `$contains`, and the logical `$and/$or/$nor/$not`), with arbitrary nesting
+supported inside `request.filters`.
+
+Returns both flat results (for backward compatibility) and grouped results (for UI).
+When padding > 0, groups chunks by main matches and their padding chunks.
+- [Retrieve Documents](https://morphik.ai/docs/api-reference/retrieve-documents.md): Retrieve relevant documents.
+
+`request.filters` supports equality checks (including scalar-to-array matches) and the same operator set as
+`/retrieve/chunks`: logical composition via `$and`, `$or`, `$nor`, `$not`, plus field predicates `$eq`, `$ne`,
+`$gt`, `$gte`, `$lt`, `$lte`, `$in`, `$nin`, `$exists`, `$type`, `$regex`, and `$contains`. Use the same JSON
+structure as `/retrieve/chunks` when expressing complex logic. Comparison operators require metadata typed as
+`number`, `decimal`, `datetime`, or `date`.
+- [Search Documents By Name](https://morphik.ai/docs/api-reference/search-documents-by-name.md): Search documents by filename using full-text search.
+
+`request.filters` accepts the same operator set as `/retrieve/chunks`: `$eq`, `$ne`, `$gt`, `$gte`, `$lt`,
+`$lte`, `$in`, `$nin`, `$exists`, `$type`, `$regex` (with optional `i` flag), `$contains`, and the logical
+operators `$and`, `$or`, `$nor`, `$not`. Comparison clauses honor typed metadata (`number`, `decimal`,
+`datetime`, `date`).
+- [Update Chat Title](https://morphik.ai/docs/api-reference/update-chat-title.md): Update the title of a chat conversation.
+- [When Multimodal Models Go Blind](https://morphik.ai/docs/blogs/gpt-vs-morphik-multimodal.md): A technical exploration of why even natively multimodal LLMs struggle with diagram interpretation in documents
+- [LLM Science Battle](https://morphik.ai/docs/blogs/llm-science-battle.md): Drowning in Discoveries? How LLMs (and Morphik) Are Learning to Read Science
+- [Vibe-Coding Memory](https://morphik.ai/docs/blogs/memory-vibe-coding.md): What I Learnt From Vibe-Coding an Alternative to ChatGPT's New Memory Feature
+- [Why We Stopped Parsing Documents for RAG (And You Should Too)](https://morphik.ai/docs/blogs/stop-parsing-docs.md)
+- [Retrieving Images](https://morphik.ai/docs/concepts/colpali.md): Using Late-interaction and Contrastive learning to achieve state-of-the-art performance in visual retrieval
+- [Knowledge Graphs and Graph RAG](https://morphik.ai/docs/concepts/knowledge-graphs.md): Leveraging graph-based relationships for improved context and retrieval in RAG systems
+- [Metadata Filtering](https://morphik.ai/docs/concepts/metadata-filtering.md): Canonical reference for Morphik’s metadata filter DSL and typed comparisons.
+- [Introduction to RAG](https://morphik.ai/docs/concepts/naive-rag.md): An overview of Retrieval Augmented Generation with Vector Similarity Search
+- [User and Folder Scoping](https://morphik.ai/docs/concepts/user-folder-scoping.md): Organizing data with user and folder scoping in Morphik
+- [Configure Morphik](https://morphik.ai/docs/configuration.md): Exploring the tunable knobs via `morphik.toml`
+- [Agent Workflows](https://morphik.ai/docs/cookbooks/agent-workflows.md): Practical examples of using the Morphik Agent for complex analysis tasks
+- [API Basic Operations](https://morphik.ai/docs/cookbooks/api-basic-operations.md): End-to-end walkthrough of ingestion, retrieval, and LLM integration using the Morphik REST API.
+- [Complex Metadata Filtering](https://morphik.ai/docs/cookbooks/complex-metadata-filtering.md): Advanced document filtering using dates, arrays, decimals, and multiple operators for precise retrieval.
+- [Generating Completions with Retrieved Chunks](https://morphik.ai/docs/cookbooks/generating-completions-with-retrieved-chunks.md): Send Morphik document chunks to OpenAI using presigned URLs or base64-encoded images for vision model completions.
+- [Python SDK Basic Operations](https://morphik.ai/docs/cookbooks/python-basic-operations.md): End-to-end walkthrough of ingestion, retrieval, and LLM integration using the Morphik Python SDK.
+- [TypeScript Basic Operations](https://morphik.ai/docs/cookbooks/typescript-basic-operations.md): End-to-end walkthrough of ingestion, retrieval, and LLM handoff with the Morphik TypeScript SDK.
+- [Getting Started](https://morphik.ai/docs/getting-started.md): Get up and running with Morphik
+- [What is Morphik?](https://morphik.ai/docs/introduction.md): An overview of Morphik
+- [How do I set up RAG?](https://morphik.ai/docs/knowledge-base/how-do-i-set-up-rag.md): Overview of building a retrieval augmented generation workflow
+- [How do I handle multi-modal inputs?](https://morphik.ai/docs/knowledge-base/how-to-handle-multi-modal-inputs.md): Combining text, images, and other data types in a search system
+- [How can I improve retrieval accuracy?](https://morphik.ai/docs/knowledge-base/how-to-improve-retrieval-accuracy.md): Best practices for getting the most relevant results from your data
+- [How should I chunk my documents?](https://morphik.ai/docs/knowledge-base/how-to-manage-document-chunking.md): Guidance on splitting data for optimal retrieval
+- [How do I perform search over documents?](https://morphik.ai/docs/knowledge-base/how-to-perform-search-over-documents.md): Techniques for searching document collections efficiently
+- [Local Inference](https://morphik.ai/docs/local-inference.md): Run Morphik completely offline with local embedding and completion models
+- [add_document_to_folder](https://morphik.ai/docs/python-sdk/add_document_to_folder.md): Add an existing document to a folder
+- [batch_get_chunks](https://morphik.ai/docs/python-sdk/batch_get_chunks.md): Retrieve specific chunks by their document ID and chunk number
+- [batch_get_documents](https://morphik.ai/docs/python-sdk/batch_get_documents.md): Retrieve multiple documents by their IDs in a single batch operation
+- [check_workflow_status](https://morphik.ai/docs/python-sdk/check_workflow_status.md): Poll the status of an asynchronous graph build/update workflow
+- [close](https://morphik.ai/docs/python-sdk/close.md): Close the HTTP session or client
+- [create_folder](https://morphik.ai/docs/python-sdk/create_folder.md): Create a new folder for organizing documents
+- [create_graph](https://morphik.ai/docs/python-sdk/create_graph.md): Create a graph from documents
+- [delete_document](https://morphik.ai/docs/python-sdk/delete_document.md): Delete a document and all its associated data
+- [delete_document_by_filename](https://morphik.ai/docs/python-sdk/delete_document_by_filename.md): Delete a document by its filename
+- [delete_folder](https://morphik.ai/docs/python-sdk/delete_folder.md): Delete a folder and its documents
+- [extract_document_pages](https://morphik.ai/docs/python-sdk/extract_document_pages.md): Extract specific pages from a document
+- [Folder Management](https://morphik.ai/docs/python-sdk/folders.md): Organize and isolate data into logical folder groups in Morphik
+- [get_chat_history](https://morphik.ai/docs/python-sdk/get_chat_history.md): Fetch the full message history for a specific chat conversation
+- [get_document](https://morphik.ai/docs/python-sdk/get_document.md): Get document metadata by ID
+- [get_document_by_filename](https://morphik.ai/docs/python-sdk/get_document_by_filename.md): Get document metadata by filename
+- [get_document_download_url](https://morphik.ai/docs/python-sdk/get_document_download_url.md): Generate a presigned URL to download a document's raw file content
+- [get_document_file](https://morphik.ai/docs/python-sdk/get_document_file.md): Download the raw file content of a document
+- [get_document_status](https://morphik.ai/docs/python-sdk/get_document_status.md): Get the current processing status of a document
+- [get_folder](https://morphik.ai/docs/python-sdk/get_folder.md): Retrieve a folder by name or UUID
+- [get_folders_details](https://morphik.ai/docs/python-sdk/get_folders_details.md): Get detailed information about folders with optional document statistics
+- [get_folders_summary](https://morphik.ai/docs/python-sdk/get_folders_summary.md): Get summary information for all accessible folders
+- [get_graph](https://morphik.ai/docs/python-sdk/get_graph.md): Get a graph by name
+- [get_graph_status](https://morphik.ai/docs/python-sdk/get_graph_status.md): Get the current status of a graph with pipeline stage information
+- [get_graph_visualization](https://morphik.ai/docs/python-sdk/get_graph_visualization.md): Retrieve nodes and links for visualizing a knowledge graph
+- [get_recent_usage](https://morphik.ai/docs/python-sdk/get_recent_usage.md): Retrieve a log of recent usage entries with optional filters
+- [get_usage_stats](https://morphik.ai/docs/python-sdk/get_usage_stats.md): Retrieve cumulative token usage for the current user or application
+- [ingest_file](https://morphik.ai/docs/python-sdk/ingest_file.md): Ingest a file document into Morphik
+- [ingest_files](https://morphik.ai/docs/python-sdk/ingest_files.md): Batch ingest multiple files into Morphik
+- [ingest_text](https://morphik.ai/docs/python-sdk/ingest_text.md): Ingest a text document into Morphik
+- [list_chat_conversations](https://morphik.ai/docs/python-sdk/list_chat_conversations.md): List recent chat conversations for the authenticated user
+- [list_documents](https://morphik.ai/docs/python-sdk/list_documents.md): List accessible documents in Morphik
+- [list_folders](https://morphik.ai/docs/python-sdk/list_folders.md): List all folders available to the client
+- [list_graphs](https://morphik.ai/docs/python-sdk/list_graphs.md): List all graphs the user has access to
+- [Migration Guide: v0.x to v1.0](https://morphik.ai/docs/python-sdk/migration-v1.md): Guide for upgrading from Morphik SDK v0.x to v1.0
+- [Morphik](https://morphik.ai/docs/python-sdk/morphik.md): Main client for document operations in Morphik
+- [ping](https://morphik.ai/docs/python-sdk/ping.md): Health-check endpoint – verify that your Morphik server is reachable
+- [query](https://morphik.ai/docs/python-sdk/query.md): Generate completion using relevant chunks as context
+- [query_document](https://morphik.ai/docs/python-sdk/query_document.md): Run a one-off Morphik On-the-Fly analysis with optional ingestion follow-up
+- [remove_document_from_folder](https://morphik.ai/docs/python-sdk/remove_document_from_folder.md): Remove a document from a folder
+- [retrieve_chunks](https://morphik.ai/docs/python-sdk/retrieve_chunks.md): Retrieve relevant chunks from Morphik
+- [retrieve_chunks_grouped](https://morphik.ai/docs/python-sdk/retrieve_chunks_grouped.md): Retrieve relevant chunks with grouping for UI display
+- [retrieve_docs](https://morphik.ai/docs/python-sdk/retrieve_docs.md): Retrieve relevant documents from Morphik
+- [search_documents](https://morphik.ai/docs/python-sdk/search_documents.md): Search for documents by name or filename
+- [update_document_by_filename_metadata](https://morphik.ai/docs/python-sdk/update_document_by_filename_metadata.md): Update a document's metadata using filename to identify the document
+- [update_document_by_filename_with_file](https://morphik.ai/docs/python-sdk/update_document_by_filename_with_file.md): Update a document identified by filename with content from a file
+- [update_document_by_filename_with_text](https://morphik.ai/docs/python-sdk/update_document_by_filename_with_text.md): Update a document identified by filename with new text content
+- [update_document_metadata](https://morphik.ai/docs/python-sdk/update_document_metadata.md): Update a document's metadata only
+- [update_document_with_file](https://morphik.ai/docs/python-sdk/update_document_with_file.md): Update a document with content from a file
+- [update_document_with_text](https://morphik.ai/docs/python-sdk/update_document_with_text.md): Update a document with new text content
+- [update_graph](https://morphik.ai/docs/python-sdk/update_graph.md): Update an existing knowledge graph with new documents
+- [User Management](https://morphik.ai/docs/python-sdk/users.md): Organize and isolate data by end user in Morphik
+- [wait_for_graph_completion](https://morphik.ai/docs/python-sdk/wait_for_graph_completion.md): Block until a graph finishes processing
+- [Installation](https://morphik.ai/docs/self-hosting.md): Install Morphik on your own infrastructure
+- [Special Thanks](https://morphik.ai/docs/special-thanks.md): Thanking our amazing users for pointing out bugs, requesting features, and being early adopters ❤️
+- [Code](https://morphik.ai/docs/using-morphik/code.md): Learn how to use the Morphik Python SDK or REST API
+- [Model Context Protocol (MCP)](https://morphik.ai/docs/using-morphik/mcp.md): Enable Claude and other AI assistants to access your Morphik knowledge base
+- [Morphik UI](https://morphik.ai/docs/using-morphik/morphik-ui.md): Learn how to use the Morphik UI interface

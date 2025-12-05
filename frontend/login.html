@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Login</title>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Global Styles */
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #000000;
+      color: #e3e3e3;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    /* Animated Background */
+    .bg-gradient {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      opacity: 0.15;
+      background: radial-gradient(circle at 20% 50%, rgba(66, 133, 244, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(234, 67, 53, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 40% 20%, rgba(251, 188, 5, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 90% 30%, rgba(52, 168, 83, 0.3) 0%, transparent 50%);
+      animation: gradientShift 15s ease infinite;
+    }
+
+    @keyframes gradientShift {
+
+      0%,
+      100% {
+        opacity: 0.15;
+      }
+
+      50% {
+        opacity: 0.25;
+      }
+    }
+
+    /* Login Container */
+    .login-container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 450px;
+      padding: 20px;
+    }
+
+    /* Login Box */
+    .login-box {
+      background: rgba(23, 23, 23, 0.95);
+      backdrop-filter: blur(20px);
+      padding: 48px 40px;
+      border-radius: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(255, 255, 255, 0.05);
+      text-align: center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .login-box:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(255, 255, 255, 0.1);
+    }
+
+    /* Logo Area */
+    .logo-area {
+      margin-bottom: 32px;
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 80px;
+      height: 102px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    .logo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* Heading */
+    .login-box h2 {
+      font-family: 'Poppins', sans-serif;
+      margin: 0 0 8px 0;
+      font-size: 32px;
+      font-weight: 600;
+      color: #e3e3e3;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      color: #9aa0a6;
+      font-size: 16px;
+      font-weight: 400;
+      margin-bottom: 32px;
+    }
+
+    /* Input Container */
+    .input-container {
+      position: relative;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .input-label {
+      display: block;
+      color: #9aa0a6;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      padding-left: 4px;
+      letter-spacing: 0.3px;
+    }
+
+    /* Inputs */
+    input {
+      width: 100%;
+      padding: 16px 16px;
+      border-radius: 12px;
+      border: 1.5px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.05);
+      color: #e3e3e3;
+      font-size: 16px;
+      font-family: 'Poppins', sans-serif;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    input::placeholder {
+      color: #5f6368;
+    }
+
+    input:focus {
+      border: 1.5px solid #4285f4;
+      background: rgba(66, 133, 244, 0.08);
+      outline: none;
+      box-shadow: 0 0 0 4px rgba(66, 133, 244, 0.1);
+    }
+
+    input:hover:not(:focus) {
+      border-color: rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    /* Button */
+    button {
+      width: 100%;
+      padding: 16px;
+      margin-top: 28px;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(135deg, #4285f4, #4285f4);
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Poppins', sans-serif;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      letter-spacing: 0.3px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    button:hover::before {
+      left: 100%;
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, #3b78e7, #3b78e7);
+      box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Error Message */
+    .error {
+      color: #ea4335;
+      margin-top: 16px;
+      font-size: 14px;
+      display: none;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 500;
+      padding: 12px;
+      background: rgba(234, 67, 53, 0.1);
+      border-radius: 8px;
+      border: 1px solid rgba(234, 67, 53, 0.2);
+      animation: shake 0.4s;
+    }
+
+    @keyframes shake {
+
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+
+      25% {
+        transform: translateX(-8px);
+      }
+
+      75% {
+        transform: translateX(8px);
+      }
+    }
+
+    /* Loading State */
+    button.loading {
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    button.loading::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      top: 50%;
+      left: 50%;
+      margin-left: -8px;
+      margin-top: -8px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 500px) {
+      .login-box {
+        padding: 40px 28px;
+      }
+
+      .login-box h2 {
+        font-size: 28px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="bg-gradient"></div>
+
+  <div class="login-container">
+    <div class="login-box">
+      <div class="logo-area">
+        <div class="logo">
+          <img
+            src="https://static.wixstatic.com/media/a02472_000f718e5d4a40d992add4f006381e00~mv2.png/v1/fill/w_83,h_106,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/PWNE%20LOGO%20WHITE%20NEW-01.png"
+            srcset="https://static.wixstatic.com/media/a02472_000f718e5d4a40d992add4f006381e00~mv2.png/v1/fill/w_83,h_106,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/PWNE%20LOGO%20WHITE%20NEW-01.png 1x, https://static.wixstatic.com/media/a02472_000f718e5d4a40d992add4f006381e00~mv2.png/v1/fill/w_166,h_212,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/PWNE%20LOGO%20WHITE%20NEW-01.png 2x"
+            alt="PWNE Logo" class="logo-img">
+        </div>
+        <h2>Welcome back</h2>
+        <div class="subtitle">Sign in to continue</div>
+      </div>
+
+      <div class="input-container">
+        <label class="input-label">USERNAME</label>
+        <input id="user" placeholder="Enter your username" autocomplete="username">
+      </div>
+
+      <div class="input-container">
+        <label class="input-label">PASSWORD</label>
+        <input id="pass" placeholder="Enter your password" type="password" autocomplete="current-password">
+      </div>
+
+      <button onclick="login()">Sign in</button>
+      <div class="error" id="error">Invalid username or password</div>
+    </div>
+  </div>
+
+  <script>
+    const BACKEND_URL = "http://localhost:3221"; // Change to your server IP
+
+    async function login() {
+      const username = document.getElementById("user").value;
+      const password = document.getElementById("pass").value;
+      const errorBox = document.getElementById("error");
+      const button = document.querySelector("button");
+
+      // Hide error if visible
+      errorBox.style.display = "none";
+
+      // Validate inputs
+      if (!username || !password) {
+        errorBox.textContent = "Please fill in all fields";
+        errorBox.style.display = "block";
+        return;
+      }
+
+      // Add loading state
+      button.classList.add("loading");
+      button.textContent = "";
+
+      const form = new FormData();
+      form.append("username", username);
+      form.append("password", password);
+
+      try {
+        const response = await fetch(`${BACKEND_URL}/login`, {
+          method: "POST",
+          body: form
+        });
+
+        if (response.status === 200) {
+          const data = await response.json();
+          // Note: localStorage is being used as per original code requirements
+          localStorage.setItem("jwt_token", data.access_token);
+          window.location.href = "index.html";
+        } else {
+          errorBox.textContent = "Invalid username or password";
+          errorBox.style.display = "block";
+          button.classList.remove("loading");
+          button.textContent = "Sign in";
+        }
+      } catch (error) {
+        errorBox.textContent = "Connection error. Please try again.";
+        errorBox.style.display = "block";
+        button.classList.remove("loading");
+        button.textContent = "Sign in";
+      }
+    }
+
+    // Trigger login on Enter key press
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        login();
+      }
+    });
+  </script>
+</body>
+
+</html>

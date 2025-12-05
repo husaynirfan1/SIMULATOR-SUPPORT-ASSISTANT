@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SSA</title>
+  <link rel="icon" type="image/png" href="modeling.png">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: #212121;
+      color: #ececec;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+    }
+
+    .main-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 300px;
+      background: #1a1a1a;
+      border-right: 1px solid #3a3a3a;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: margin-left 0.3s ease;
+    }
+
+    .sidebar.collapsed {
+      margin-left: -300px;
+    }
+
+    .sidebar.open {
+      margin-left: 0;
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    
+    /* Add this CSS block for Quick Links */
+    .quick-links-section {
+      margin-bottom: 30px; /* Space below the section */
+    }
+
+    .quick-links-section h3 {
+      font-size: 14px;
+      color: #999; /* Light grey color */
+      margin-bottom: 12px;
+      text-transform: uppercase; /* Uppercase text */
+      letter-spacing: 0.5px; /* Slight spacing between letters */
+    }
+
+    .auth-status {
+      background: #2f2f2f;
+      border: 1px solid #3a3a3a;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+    }
+
+    .auth-status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .auth-status-indicator.connected {
+      background: #10a37f;
+      box-shadow: 0 0 8px rgba(16, 163, 127, 0.5);
+    }
+
+    .auth-status-indicator.disconnected {
+      background: #ff6b6b;
+      box-shadow: 0 0 8px rgba(255, 107, 107, 0.5);
+    }
+
+    .auth-status-text {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .auth-status-label {
+      color: #999;
+      font-size: 11px;
+    }
+
+    .auth-status-value {
+      color: #ececec;
+      font-weight: 500;
+    }
+
+    .auth-btn {
+      background: none;
+      border: none;
+      color: #10a37f;
+      cursor: pointer;
+      padding: 4px 8px;
+      font-size: 12px;
+      text-decoration: underline;
+      transition: color 0.2s;
+    }
+
+    .auth-btn:hover {
+      color: #0d8f6f;
+    }
+
+    .quick-links-container {
+      display: flex;
+      flex-direction: column; /* Stack links vertically */
+      gap: 10px; /* Space between links */
+    }
+
+    .quick-link-btn {
+      background: #2f2f2f; /* Dark background matching sidebar */
+      color: #10a37f; /* Green color matching the theme */
+      border: 1px solid #3a3a3a; /* Slightly lighter border */
+      padding: 12px 16px; /* Padding inside the button/link */
+      border-radius: 8px; /* Rounded corners */
+      cursor: pointer;
+      font-size: 14px; /* Font size */
+      font-family: 'Roboto', sans-serif; /* Font family */
+      text-decoration: none; /* Remove default underline */
+      transition: all 0.2s; /* Smooth transition for hover effect */
+      text-align: center; /* Center the text */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .quick-link-btn:hover {
+      background: #3a3a3a; /* Slightly lighter background on hover */
+      transform: translateY(-2px); /* Lift effect on hover */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Add a subtle shadow on hover */
+    }
+
+    .quick-link-btn:active {
+      transform: translateY(0); /* Press down effect when clicked */
+    }
+
+    .quick-link-btn.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .link-icon {
+      font-size: 16px;
+    }
+    /* End of Quick Links CSS */
+
+    /* Inventory Section Styles */
+    .inventory-section {
+      margin-bottom: 30px;
+    }
+
+    .inventory-section h3 {
+      font-size: 14px;
+      color: #999;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .inventory-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .inventory-btn {
+      background: #2f2f2f;
+      color: #10a37f;
+      border: 1px solid #3a3a3a;
+      padding: 12px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-family: 'Roboto', sans-serif;
+      text-decoration: none;
+      transition: all 0.2s;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .inventory-btn:hover {
+      background: #3a3a3a;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .inventory-btn:active {
+      transform: translateY(0);
+    }
+
+    .inventory-btn.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .inventory-icon {
+      font-size: 16px;
+    }
+
+    .upload-section {
+      margin-bottom: 30px;
+    }
+
+    .upload-section h3 {
+      font-size: 14px;
+      color: #999;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .upload-area {
+      border: 2px dashed #3a3a3a;
+      border-radius: 12px;
+      padding: 30px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: #212121;
+    }
+
+    .upload-area:hover {
+      border-color: #10a37f;
+      background: #252525;
+    }
+
+    .upload-area.dragover {
+      border-color: #10a37f;
+      background: #2a2a2a;
+    }
+
+    .upload-icon {
+      font-size: 40px;
+      margin-bottom: 10px;
+      color: #666;
+    }
+
+    .upload-text {
+      font-size: 14px;
+      color: #999;
+      margin-bottom: 10px;
+    }
+
+    .upload-btn {
+      background: #10a37f;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 10px;
+      transition: all 0.2s;
+    }
+
+    .upload-btn:hover {
+      background: #0d8f6f;
+    }
+
+    #file-input {
+      display: none;
+    }
+
+    .uploaded-files {
+      margin-top: 20px;
+    }
+
+    .file-item {
+      background: #2f2f2f;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      display: flex;
+      flex-direction: column;
+      font-size: 13px;
+    }
+
+    .file-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .file-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .file-icon {
+      font-size: 18px;
+    }
+
+    .file-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-status {
+      font-size: 11px;
+      color: #999;
+    }
+
+    .file-status.success {
+      color: #10a37f;
+    }
+
+    .file-status.error {
+      color: #ff6b6b;
+    }
+
+    .file-status.uploading {
+      color: #666;
+    }
+
+    .delete-file-btn {
+      background: none;
+      border: none;
+      color: #999;
+      cursor: pointer;
+      padding: 4px 8px;
+      font-size: 16px;
+      transition: color 0.2s;
+    }
+
+    .delete-file-btn:hover {
+      color: #ff6b6b;
+    }
+
+    .file-details {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #3a3a3a;
+      font-size: 12px;
+      color: #999;
+    }
+
+    .file-detail-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 4px 0;
+    }
+
+    .file-detail-label {
+      color: #666;
+    }
+
+    .file-detail-value {
+      color: #ececec;
+    }
+
+    .processing-status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .processing-status.processed {
+      background: #1a4d3a;
+      color: #10a37f;
+    }
+
+    .processing-status.processing {
+      background: #3a3a1a;
+      color: #d4a537;
+    }
+
+    .processing-status.failed {
+      background: #4a2525;
+      color: #ff6b6b;
+    }
+
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .header {
+      text-align: center;
+      padding: 20px 60px;
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+      border-bottom: 1px solid #3a3a3a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .toggle-sidebar-btn {
+      position: absolute;
+      left: 20px;
+      background: #2f2f2f;
+      border: 1px solid #3a3a3a;
+      color: #ececec;
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 18px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      min-width: 44px;
+      min-height: 44px;
+    }
+
+    .toggle-sidebar-btn:hover {
+      background: #3a3a3a;
+      transform: scale(1.05);
+    }
+
+    .toggle-sidebar-btn:active {
+      transform: scale(0.95);
+    }
+
+    .chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      padding-bottom: 250px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      scroll-behavior: smooth;
+    }
+
+    .chat-wrapper {
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .message {
+      margin-bottom: 20px;
+      padding: 16px 20px;
+      border-radius: 12px;
+      line-height: 1.6;
+      font-size: 15px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      animation: fadeIn 0.3s ease-in;
+      word-wrap: break-word;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message.user {
+      background: #3a3a3a;
+      align-self: flex-end;
+    }
+
+    .message.assistant {
+      background: #2f2f2f;
+    }
+
+    .message.assistant.streaming::after {
+      content: '▋';
+      animation: blink 1s infinite;
+      margin-left: 2px;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    /* Markdown styles */
+    .message pre {
+      background: #1a1a1a;
+      padding: 12px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+
+    .message code {
+      background: #1a1a1a;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+
+    .message pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .message h1, .message h2, .message h3 {
+      font-family: 'Playfair Display', serif;
+      margin: 16px 0 8px 0;
+    }
+
+    .message h1 {
+      font-size: 24px;
+    }
+
+    .message h2 {
+      font-size: 20px;
+    }
+
+    .message h3 {
+      font-size: 18px;
+    }
+
+    .message ul, .message ol {
+      margin: 10px 0;
+      padding-left: 24px;
+    }
+
+    .message li {
+      margin: 4px 0;
+    }
+
+    .message p {
+      margin: 8px 0;
+    }
+
+    .message blockquote {
+      border-left: 3px solid #555;
+      padding-left: 12px;
+      margin: 10px 0;
+      color: #bbb;
+    }
+
+    .message a {
+      color: #10a37f;
+      text-decoration: none;
+    }
+
+    .message a:hover {
+      text-decoration: underline;
+    }
+
+    .message table {
+      border-collapse: collapse;
+      margin: 10px 0;
+      width: 100%;
+    }
+
+    .message th, .message td {
+      border: 1px solid #3a3a3a;
+      padding: 8px;
+      text-align: left;
+    }
+
+    .message th {
+      background: #1a1a1a;
+    }
+
+    .input-area {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #212121;
+      border-top: 1px solid #3a3a3a;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .suggestions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 900px;
+    }
+
+    .suggestion-btn {
+      background: #2f2f2f;
+      border: 1px solid #3a3a3a;
+      color: #ececec;
+      padding: 10px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: 'Roboto', sans-serif;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .suggestion-btn:hover {
+      background: #3a3a3a;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .input-wrapper {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      max-width: 900px;
+      position: relative;
+    }
+
+    #inventory-toggle {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: #666;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: 'Roboto', sans-serif;
+      transition: all 0.25s ease;
+      z-index: 10;
+      letter-spacing: 0.3px;
+    }
+
+    #inventory-toggle:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #999;
+    }
+
+    #inventory-toggle.active {
+      background: rgba(16, 163, 127, 0.15);
+      color: #10a37f;
+      font-weight: 600;
+    }
+
+    #inventory-toggle.active:hover {
+      background: rgba(16, 163, 127, 0.2);
+    }
+
+    #query-input {
+      flex: 1;
+      background: #2f2f2f;
+      border: 1px solid #3a3a3a;
+      color: #ececec;
+      padding: 14px 18px 14px 120px;
+      border-radius: 24px;
+      font-size: 15px;
+      font-family: 'Roboto', sans-serif;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    #query-input:focus {
+      border-color: #555;
+      box-shadow: 0 0 0 3px rgba(85, 85, 85, 0.2);
+    }
+
+    #send-btn {
+      background: #10a37f;
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 24px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 500;
+      font-family: 'Roboto', sans-serif;
+      transition: all 0.2s;
+    }
+
+    #send-btn:hover:not(:disabled) {
+      background: #0d8f6f;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(16, 163, 127, 0.3);
+    }
+
+    #send-btn:disabled {
+      background: #555;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .error-message {
+      background: #4a2525;
+      color: #ff6b6b;
+      border-left: 4px solid #ff6b6b;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      padding: 16px 20px;
+      background: #2f2f2f;
+      border-radius: 12px;
+      width: fit-content;
+      margin-bottom: 20px;
+    }
+
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      background: #666;
+      border-radius: 50%;
+      animation: typing 1.4s infinite;
+    }
+
+    .typing-dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes typing {
+      0%, 60%, 100% {
+        transform: translateY(0);
+      }
+      30% {
+        transform: translateY(-10px);
+      }
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #1a1a1a;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #3a3a3a;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4a4a4a;
+    }
+
+    
+  </style>
+</head>
+<body>
+  <div class="main-container">
+    <!-- Sidebar -->
+    <div class="sidebar collapsed">
+      <div class="sidebar-header">Menu</div>
+      <div class="sidebar-content">
+
+        <div class="quick-links-section">
+          <h3>Quick Links</h3>
+          <div class="quick-links-container">
+            <a href="https://outlook.office.com/mail/" target="_blank" class="quick-link-btn">Outlook</a>
+            <a href="https://pwne-my.sharepoint.com/:x:/g/personal/technical_pwne_com_my/EdwTuPWcW8lAvmuEhQTqX1gBOK7r83CrnEgUzEVXRCThFA?CID=d30362d8-08a7-6f83-a777-2e2b1f4987ac&e=ni21X7&nav=MTJfQjY6STdfezg1NTNFRDYxLTkxNTctNDg2RC1CRUUwLTYxQ0I3REY1MjU1QX0" target="_blank" class="quick-link-btn">Daily Handover</a>
+            <a href="https://gemini.cae.com/gemini/forms/home.aspx" target="_blank" class="quick-link-btn">Gemini CAE</a>
+          </div>
+        </div>
+
+        <!-- Inventory Section -->
+        <div class="inventory-section">
+          <h3>Inventory</h3>
+          <div class="inventory-container">
+            <button class="inventory-btn" data-query="/inventory Check inventory levels">
+              <span class="inventory-icon">📊</span>
+              Check Inventory Levels
+            </button>
+            <button class="inventory-btn" data-query="/inventory List low stock items">
+              <span class="inventory-icon">⚠️</span>
+              Low Stock Items
+            </button>
+            <button class="inventory-btn" data-query="/inventory View inventory reports">
+              <span class="inventory-icon">📈</span>
+              Inventory Reports
+            </button>
+          </div>
+        </div>
+
+        <div class="upload-section">
+          <h3>Upload Documents</h3>
+          <div class="upload-area" id="upload-area">
+            <div class="upload-icon">📄</div>
+            <div class="upload-text">Drag & drop files here</div>
+            <div class="upload-text" style="font-size: 12px; color: #666;">or</div>
+            <button class="upload-btn" onclick="document.getElementById('file-input').click()">
+              Browse Files
+            </button>
+            <input type="file" id="file-input" multiple accept=".pdf,.doc,.docx,.txt">
+          </div>
+          <div class="uploaded-files" id="uploaded-files"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Area -->
+    <div class="chat-area">
+      <div class="header">
+        <button class="toggle-sidebar-btn" id="toggle-sidebar-btn">&gt;</button>
+        SSA
+      </div>
+      
+      <div class="chat-container" id="chat-container">
+        <div class="chat-wrapper" id="chat-wrapper"></div>
+      </div>
+
+      <div class="input-area">
+        <div class="suggestions" id="suggestions">
+          <button class="suggestion-btn" data-query="What is the VIPT resolution?">What is the VIPT resolution?</button>
+          <button class="suggestion-btn" data-query="The chronometer is not working.">The chronometer is not working</button>
+          <button class="suggestion-btn" data-query="How to perform PM-115.22 aircond ?">How to perform PM-115.22 aircond ?</button>
+          <button class="suggestion-btn" data-query="How to do zeroing using Kollmorgen software?">How to do zeroing using Kollmorgen software?</button>
+          <button class="suggestion-btn" data-query="/inventory Check inventory for fuses">/inventory Check inventory for fuses</button>
+        </div>
+        
+        <div class="input-wrapper">
+          <button id="inventory-toggle" title="Toggle inventory mode">
+            <span>📦</span>
+            <span class="toggle-text">INV</span>
+          </button>
+          <input type="text" id="query-input" placeholder="Send a message..." />
+          <button id="send-btn">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const chatWrapper = document.getElementById('chat-wrapper');
+    const chatContainer = document.getElementById('chat-container');
+    const queryInput = document.getElementById('query-input');
+    const sendBtn = document.getElementById('send-btn');
+    const suggestionsContainer = document.getElementById('suggestions');
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('file-input');
+    const uploadedFilesContainer = document.getElementById('uploaded-files');
+    
+    const sidebar = document.querySelector('.sidebar');
+    const toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
+    const inventoryToggle = document.getElementById('inventory-toggle');
+
+    let isStreaming = false;
+    let currentAssistantMessage = null;
+    let thinkingBuffer = '';
+    let responseBuffer = '';
+    let inThinkTag = false;
+    let uploadedFiles = [];
+    let inventoryModeEnabled = false;
+
+    // API Configuration
+    const API_KEY = '01HTM6R2E3-HUSAYN-K8Z5W9XG';
+    const API_BASE_URL = 'http://172.24.2.220:9621';
+    const INVENTORY_API_URL = 'http://172.24.2.220:5000';
+
+    // Configure marked for better markdown rendering
+    marked.setOptions({
+      breaks: true,
+      gfm: true
+    });
+
+    // Toggle sidebar
+    toggleSidebarBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+      sidebar.classList.toggle('open');
+      toggleSidebarBtn.innerHTML = sidebar.classList.contains('collapsed') ? '&gt;' : '&lt;';
+    });
+    // Toggle inventory mode
+    inventoryToggle.addEventListener('click', () => {
+      inventoryModeEnabled = !inventoryModeEnabled;
+      inventoryToggle.classList.toggle('active');
+      
+      // Update placeholder text
+      if (inventoryModeEnabled) {
+        queryInput.placeholder = 'Ask about inventory...';
+      } else {
+        queryInput.placeholder = 'Send a message...';
+      }
+    });
+
+    // File upload handling
+    uploadArea.addEventListener('click', (e) => {
+      if (e.target !== uploadArea && !e.target.closest('.upload-btn')) return;
+    });
+
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      const files = Array.from(e.dataTransfer.files);
+      handleFileUpload(files);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const files = Array.from(e.target.files);
+      handleFileUpload(files);
+      fileInput.value = '';
+    });
+
+    async function handleFileUpload(files) {
+      for (const file of files) {
+        const fileId = Date.now() + '_' + file.name;
+        const fileItem = createFileItem(file, fileId);
+        uploadedFilesContainer.appendChild(fileItem);
+
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+
+          updateFileStatus(fileId, 'uploading', 'Uploading...');
+
+          const response = await fetch(`${API_BASE_URL}/documents/upload`, {
+            method: 'POST',
+            headers: {
+              'X-API-Key': API_KEY
+            },
+            body: formData
+          });
+
+          if (!response.ok) {
+            throw new Error(`Upload failed: ${response.status}`);
+          }
+
+          const result = await response.json();
+          updateFileStatus(fileId, 'success', 'Uploaded');
+          uploadedFiles.push({
+            id: fileId,
+            name: file.name,
+            trackId: result.track_id || result.id
+          });
+
+          // Start tracking document status
+          if (result.track_id) {
+            trackDocumentStatus(fileId, result.track_id);
+          }
+
+        } catch (error) {
+          console.error('Upload error:', error);
+          updateFileStatus(fileId, 'error', 'Upload failed');
+        }
+      }
+    }
+
+    async function trackDocumentStatus(fileId, trackId) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/documents/track_status/${trackId}`, {
+          method: 'GET',
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-API-Key': API_KEY
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Status check failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        updateFileDetails(fileId, data);
+
+        // Continue polling if still processing
+        if (data.status === 'PROCESSING') {
+          setTimeout(() => trackDocumentStatus(fileId, trackId), 3000);
+        }
+
+      } catch (error) {
+        console.error('Status tracking error:', error);
+      }
+    }
+
+    function updateFileDetails(fileId, data) {
+      const detailsEl = document.getElementById(`details-${fileId}`);
+      if (!detailsEl) return;
+
+      // Show details section
+      detailsEl.style.display = 'block';
+
+      // Get status class
+      let statusClass = 'processing';
+      if (data.status === 'PROCESSED') statusClass = 'processed';
+      if (data.status === 'FAILED') statusClass = 'failed';
+
+      // Build documents info
+      let documentsInfo = '';
+      if (data.documents && data.documents.length > 0) {
+        const doc = data.documents[0];
+        documentsInfo = `
+          <div class="file-detail-row">
+            <span class="file-detail-label">Chunks:</span>
+            <span class="file-detail-value">${doc.chunks_count || 0}</span>
+          </div>
+          <div class="file-detail-row">
+            <span class="file-detail-label">Content Length:</span>
+            <span class="file-detail-value">${doc.content_length || 0}</span>
+          </div>
+          <div class="file-detail-row">
+            <span class="file-detail-label">Created:</span>
+            <span class="file-detail-value">${new Date(doc.created_at).toLocaleString()}</span>
+          </div>
+        `;
+      }
+
+      detailsEl.innerHTML = `
+        <div class="file-detail-row">
+          <span class="file-detail-label">Status:</span>
+          <span class="processing-status ${statusClass}">${data.status}</span>
+        </div>
+        <div class="file-detail-row">
+          <span class="file-detail-label">Track ID:</span>
+          <span class="file-detail-value">${data.track_id}</span>
+        </div>
+        ${documentsInfo}
+        <div class="file-detail-row">
+          <span class="file-detail-label">Total Documents:</span>
+          <span class="file-detail-value">${data.status_summary?.total_count || 0}</span>
+        </div>
+      `;
+    }
+
+    function createFileItem(file, fileId) {
+      const div = document.createElement('div');
+      div.className = 'file-item';
+      div.id = `file-${fileId}`;
+      div.innerHTML = `
+        <div class="file-item-header">
+          <div class="file-info">
+            <div class="file-icon">📄</div>
+            <div>
+              <div class="file-name">${file.name}</div>
+              <div class="file-status uploading" id="status-${fileId}">Preparing...</div>
+            </div>
+          </div>
+          <button class="delete-file-btn" onclick="deleteFile('${fileId}')">×</button>
+        </div>
+        <div class="file-details" id="details-${fileId}" style="display: none;"></div>
+      `;
+      return div;
+    }
+
+    function updateFileStatus(fileId, statusClass, text) {
+      const statusEl = document.getElementById(`status-${fileId}`);
+      if (statusEl) {
+        statusEl.className = `file-status ${statusClass}`;
+        statusEl.textContent = text;
+      }
+    }
+
+    window.deleteFile = function(fileId) {
+      const fileEl = document.getElementById(`file-${fileId}`);
+      if (fileEl) {
+        fileEl.remove();
+      }
+      uploadedFiles = uploadedFiles.filter(f => f.id !== fileId);
+    };
+
+    // Auto-scroll function
+    function scrollToBottom() {
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // Add user message
+    function addUserMessage(text) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message user';
+      messageDiv.textContent = text;
+      chatWrapper.appendChild(messageDiv);
+      scrollToBottom();
+    }
+
+    // Add assistant message (for streaming)
+    function createAssistantMessage() {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message assistant streaming';
+      messageDiv.innerHTML = '';
+      chatWrapper.appendChild(messageDiv);
+      scrollToBottom();
+      return messageDiv;
+    }
+
+    // Append chunk to assistant message with markdown rendering
+    function appendStreamChunk(chunk) {
+      if (currentAssistantMessage) {
+        responseBuffer += chunk;
+        // Render markdown
+        currentAssistantMessage.innerHTML = marked.parse(responseBuffer);
+        scrollToBottom();
+      }
+    }
+
+    // Process streaming chunk and handle <think> tags
+    function processChunk(chunk) {
+      for (let i = 0; i < chunk.length; i++) {
+        const char = chunk[i];
+        
+        if (!inThinkTag) {
+          thinkingBuffer += char;
+          
+          // Check if we're entering a think tag
+          if (thinkingBuffer.endsWith('<think>')) {
+            inThinkTag = true;
+            // Remove the <think> tag from buffer
+            thinkingBuffer = thinkingBuffer.slice(0, -7);
+            
+            // If there's content before <think>, append it
+            if (thinkingBuffer && currentAssistantMessage) {
+              appendStreamChunk(thinkingBuffer);
+            }
+            thinkingBuffer = '';
+          }
+        } else {
+          thinkingBuffer += char;
+          
+          // Check if we're exiting a think tag
+          if (thinkingBuffer.endsWith('</think>')) {
+            inThinkTag = false;
+            // Discard everything in the thinking buffer (it's the think content)
+            thinkingBuffer = '';
+            // Start showing content after </think>
+            if (!currentAssistantMessage) {
+              removeTypingIndicator();
+              currentAssistantMessage = createAssistantMessage();
+            }
+          }
+        }
+      }
+      
+      // If we're past the think tags and have content, render it
+      if (!inThinkTag && thinkingBuffer) {
+        if (currentAssistantMessage) {
+          appendStreamChunk(thinkingBuffer);
+          thinkingBuffer = '';
+        }
+      }
+    }
+
+    // Show error
+    function showError(errorText) {
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'error-message';
+      errorDiv.textContent = `Error: ${errorText}`;
+      chatWrapper.appendChild(errorDiv);
+      scrollToBottom();
+    }
+
+    // Show typing indicator
+    function showTypingIndicator() {
+      const typingDiv = document.createElement('div');
+      typingDiv.className = 'typing-indicator';
+      typingDiv.id = 'typing-indicator';
+      typingDiv.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+      chatWrapper.appendChild(typingDiv);
+      scrollToBottom();
+    }
+
+    // Remove typing indicator
+    function removeTypingIndicator() {
+      const typingIndicator = document.getElementById('typing-indicator');
+      if (typingIndicator) {
+        typingIndicator.remove();
+      }
+    }
+
+    // Check if query is inventory-related
+    function isInventoryQuery(query) {
+      const inventoryKeywords = [
+        'inventory', 'stock', 'item', 'product', 'supply', 'quantity',
+        'check inventory', 'low stock', 'inventory report', 'spare parts',
+        'reorder', 'supplier', 'warehouse', 'inventory levels'
+      ];
+      
+      const queryLower = query.toLowerCase();
+      return inventoryKeywords.some(keyword => queryLower.includes(keyword));
+    }
+
+    // Handle inventory query
+    async function handleInventoryQuery(query) {
+      try {
+        // Show typing indicator
+        showTypingIndicator();
+
+        // Send query to inventory API
+        const response = await fetch(`${INVENTORY_API_URL}/inventory/query`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            query: query
+          })
+        });
+
+        removeTypingIndicator();
+
+        if (!response.ok) {
+          throw new Error(`Inventory API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Add assistant message with inventory response
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message assistant';
+        messageDiv.innerHTML = marked.parse(data.response || data.message || 'Inventory data retrieved successfully.');
+        chatWrapper.appendChild(messageDiv);
+        scrollToBottom();
+
+      } catch (error) {
+        removeTypingIndicator();
+        showError(`Inventory query failed: ${error.message}`);
+        console.error('Inventory query error:', error);
+      }
+    }
+
+    // Handle query submission
+    async function handleQuery(query) {
+      if (!query.trim() || isStreaming) return;
+
+      // Prefix with /inventory if inventory mode is enabled
+      const actualQuery = inventoryModeEnabled ? `/inventory ${query}` : query;
+
+      isStreaming = true;
+      sendBtn.disabled = true;
+      queryInput.value = '';
+      
+      // Reset buffers
+      thinkingBuffer = '';
+      responseBuffer = '';
+      inThinkTag = false;
+
+      // Add user message (show original query without /inventory prefix)
+      addUserMessage(query);
+
+      // Check if it's an inventory query
+      if (isInventoryQuery(actualQuery)) {
+        await handleInventoryQuery(actualQuery);
+        isStreaming = false;
+        sendBtn.disabled = false;
+        queryInput.focus();
+        return;
+      }
+
+      // Show typing indicator briefly
+      showTypingIndicator();
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/query/stream`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-API-Key': API_KEY
+          },
+          body: JSON.stringify({
+            query: actualQuery,
+            mode: 'mix',
+            stream: true,
+            enable_rerank: true,
+            include_references: false
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        // Remove typing indicator (will be removed when think tags close)
+        // Don't create message yet - wait for </think>
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              const data = JSON.parse(line);
+              if (data.response) {
+                processChunk(data.response);
+              }
+              if (data.error) {
+                removeTypingIndicator();
+                showError(data.error);
+              }
+            } catch (e) {
+              console.error('Failed to parse JSON:', e);
+            }
+          }
+        }
+        
+        // Process any remaining buffer content
+        if (thinkingBuffer && !inThinkTag && currentAssistantMessage) {
+          appendStreamChunk(thinkingBuffer);
+        }
+
+        // Remove streaming cursor
+        if (currentAssistantMessage) {
+          currentAssistantMessage.classList.remove('streaming');
+        }
+
+      } catch (error) {
+        removeTypingIndicator();
+        showError(error.message || 'Failed to connect to the server. Make sure it\'s running on 172.24.2.220:9621');
+        console.error('Error:', error);
+      } finally {
+        isStreaming = false;
+        sendBtn.disabled = false;
+        currentAssistantMessage = null;
+        queryInput.focus();
+      }
+    }
+
+    // Event listeners
+    sendBtn.addEventListener('click', () => {
+      handleQuery(queryInput.value);
+    });
+
+    queryInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleQuery(queryInput.value);
+      }
+    });
+
+    // Suggestion buttons
+    suggestionsContainer.addEventListener('click', (e) => {
+      if (e.target.classList.contains('suggestion-btn')) {
+        const query = e.target.getAttribute('data-query');
+        queryInput.value = query;
+        handleQuery(query);
+      }
+    });
+
+    // Inventory buttons
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('inventory-btn')) {
+        const fullQuery = e.target.getAttribute('data-query');
+
+        // Remove the "/inventory" prefix ONLY for the input field
+        const displayQuery = fullQuery.replace(/^\/inventory\s*/i, '');
+
+        // Shcow clean query to user
+        queryInput.value = displayQuery;
+
+        // Send the real query including "/inventory" to your handler
+        handleQuery(fullQuery);
+        }
+    });
+    
+
+    // Focus input on load
+    queryInput.focus();
+    
+  </script>
+
+</body>
+
+</html>
