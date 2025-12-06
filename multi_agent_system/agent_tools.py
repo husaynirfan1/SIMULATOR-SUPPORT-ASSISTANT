@@ -47,21 +47,36 @@ def search_dr_in_csv(query: str) -> Dict[str, Any]:
             for dr_num in dr_numbers:
                 exact_match = df[df['DeficiencyNumber'] == int(dr_num)]
                 if not exact_match.empty:
-                    # Found exact match, return it
+                    # Found exact match, return it with formatted display
                     results = []
+                    formatted_text = f"Found exact match for Deficiency Record (DR) #{dr_num}:\n\n"
+
                     for _, row in exact_match.iterrows():
+                        dr_number = row.get('DeficiencyNumber', 'N/A')
+                        issue = row.get('Issue Description', 'N/A')
+                        action = row.get('ActionTaken', 'N/A')
+                        system = row.get('System', 'N/A')
+                        status = row.get('Status', 'N/A')
+                        resource = row.get('Resource', 'N/A')
+
                         results.append({
-                            "DeficiencyNumber": row.get('DeficiencyNumber'),
-                            "Issue Description": row.get('Issue Description'),
-                            "ActionTaken": row.get('ActionTaken'),
-                            "System": row.get('System'),
-                            "Status": row.get('Status'),
-                            "Resource": row.get('Resource')
+                            "DeficiencyNumber": dr_number,
+                            "Issue Description": issue,
+                            "ActionTaken": action,
+                            "System": system,
+                            "Status": status,
+                            "Resource": resource
                         })
-                    
+
+                        formatted_text += f"**DR #{dr_number}** - {system}\n"
+                        formatted_text += f"**Issue:** {issue}\n"
+                        formatted_text += f"**Action Taken:** {action}\n"
+                        formatted_text += f"**Status:** {status}\n"
+                        formatted_text += f"**Resource:** {resource}\n"
+
                     return {
                         "agent": "DR Agent",
-                        "answer": f"Found exact match for DR#{dr_num}.",
+                        "answer": formatted_text,
                         "results": results
                     }
         
@@ -103,21 +118,36 @@ def search_dr_in_csv(query: str) -> Dict[str, Any]:
                 "results": []
             }
             
-        # Format results
+        # Format results with detailed display
         results = []
-        for _, row in results_df.iterrows():
+        formatted_text = f"Found {len(results_df)} relevant Deficiency Records (DRs):\n\n"
+
+        for idx, row in results_df.iterrows():
+            dr_num = row.get('DeficiencyNumber', 'N/A')
+            issue = row.get('Issue Description', 'N/A')
+            action = row.get('ActionTaken', 'N/A')
+            system = row.get('System', 'N/A')
+            status = row.get('Status', 'N/A')
+            resource = row.get('Resource', 'N/A')
+
             results.append({
-                "DeficiencyNumber": row.get('DeficiencyNumber'),
-                "Issue Description": row.get('Issue Description'),
-                "ActionTaken": row.get('ActionTaken'),
-                "System": row.get('System'),
-                "Status": row.get('Status'),
-                "Resource": row.get('Resource')
+                "DeficiencyNumber": dr_num,
+                "Issue Description": issue,
+                "ActionTaken": action,
+                "System": system,
+                "Status": status,
+                "Resource": resource
             })
-            
+
+            formatted_text += f"**DR #{dr_num}** - {system}\n"
+            formatted_text += f"**Issue:** {issue}\n"
+            formatted_text += f"**Action Taken:** {action}\n"
+            formatted_text += f"**Status:** {status}\n"
+            formatted_text += f"**Resource:** {resource}\n\n"
+
         return {
             "agent": "DR Agent",
-            "answer": f"Found {len(results)} relevant deficiency records.",
+            "answer": formatted_text,
             "results": results
         }
 
@@ -131,20 +161,23 @@ def search_dr_in_csv(query: str) -> Dict[str, Any]:
 @tool
 def search_deficiency_records(query: str) -> Dict[str, Any]:
     """
-    Search deficiency records (DRs) and quality issues in the knowledge base.
-    
+    Search Deficiency Records (DRs) and quality issues in the knowledge base.
+
+    NOTE: DR stands for "Deficiency Record" - quality/issue tracking records at CAE.
+
     Use this tool when the user asks about:
     - Known issues, bugs, or problems
-    - Deficiency reports (DRs)
+    - Deficiency Records (DRs)
     - Quality assurance records
     - Past incidents or failures
     - Corrective actions or resolutions
-    
+    - Issues related to specific systems (PFD, MIP, etc.)
+
     Args:
         query: The search query about deficiencies or issues
-        
+
     Returns:
-        Dict containing deficiency information and sources
+        Dict containing formatted deficiency information with DR numbers, issues, actions, and status
     """
     # Prioritize CSV search
     return search_dr_in_csv(query)

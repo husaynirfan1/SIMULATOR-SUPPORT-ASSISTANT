@@ -314,7 +314,20 @@
   </div>
 
   <script>
-    const BACKEND_URL = "http://localhost:3221"; // Change to your server IP
+    // Dynamic backend URL configuration
+    // For HTTPS (Tailscale public access), use same hostname with port 3221
+    // For HTTP (local development), use localhost:3221
+    let BACKEND_URL;
+    if (window.location.protocol === 'https:') {
+      // Public access via Tailscale - use same hostname but port 3221
+      const hostname = window.location.hostname;
+      BACKEND_URL = `https://${hostname}:3221`;
+    } else {
+      // Local development - use localhost
+      BACKEND_URL = 'http://localhost:3221';
+    }
+
+    console.log('Auth Backend URL:', BACKEND_URL);
 
     async function login() {
       const username = document.getElementById("user").value;
@@ -350,7 +363,7 @@
           const data = await response.json();
           // Note: localStorage is being used as per original code requirements
           localStorage.setItem("jwt_token", data.access_token);
-          window.location.href = "index.html";
+          window.location.href = "/frontend/chatbotui/index.html";  // ✅ Redirect to chatbot UI
         } else {
           errorBox.textContent = "Invalid username or password";
           errorBox.style.display = "block";

@@ -80,10 +80,18 @@
             font-size: 1rem;
             line-height: 1.7;
             color: #E3E3E3;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         .markdown-body p {
-            margin-bottom: 1em;
+            margin-bottom: 0.5em;  /* ✅ Reduced from 1em to prevent excessive spacing */
+            margin-top: 0;
+        }
+
+        .markdown-body p:last-child {
+            margin-bottom: 0;  /* ✅ Remove margin from last paragraph */
         }
 
         .markdown-body h1,
@@ -305,6 +313,16 @@
                     <i data-lucide="settings" class="w-5 h-5 text-gemini-subtext"></i>
                     <span>Settings</span>
                 </button>
+                <button onclick="startNewChat()"
+                    class="w-full text-left px-4 py-3 rounded-lg hover:bg-blue-500/10 text-sm text-blue-400 hover:text-blue-300 flex items-center gap-3 transition-colors">
+                    <i data-lucide="plus" class="w-5 h-5"></i>
+                    <span>New Chat</span>
+                </button>
+                <button onclick="logout()"
+                    class="w-full text-left px-4 py-3 rounded-lg hover:bg-red-500/10 text-sm text-red-400 hover:text-red-300 flex items-center gap-3 transition-colors">
+                    <i data-lucide="log-out" class="w-5 h-5"></i>
+                    <span>Logout</span>
+                </button>
                 <div class="px-4 py-3 flex items-center gap-2 mt-1">
                     <div id="status-dot" class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]">
                     </div>
@@ -489,11 +507,54 @@
         console.log('window.location.protocol:', window.location.protocol);
         console.log('window.location.hostname:', window.location.hostname);
         
+        // ✅ NEW: Authentication check - redirect to login if no token
+        let jwtToken = localStorage.getItem('jwt_token');
+        if (!jwtToken) {
+            console.log('❌ No JWT token found, redirecting to login...');
+            window.location.href = '/auth/login.html';
+        }
+
         let currentMessageId = null;
         let isGenerating = false;
         let isConnected = false;
         let useDeepKnowledge = false;  // ✅ NEW: Deep knowledge mode toggle
         let conversationState = null;  // ✅ Store OT conversation state for multi-turn
+
+        // ✅ NEW: Generate persistent thread_id for this conversation session
+        // Each new conversation gets a unique thread_id that persists across all messages
+        let currentThreadId = `thread_${Date.now()}`;
+        console.log('🧵 Conversation thread_id:', currentThreadId);
+
+        // ✅ NEW: Function to logout
+        function logout() {
+            localStorage.removeItem('jwt_token');
+            window.location.href = '/auth/login.html';
+        }
+
+        // ✅ NEW: Function to start a new chat (new thread_id)
+        function startNewChat() {
+            // Generate new thread_id for fresh conversation
+            currentThreadId = `thread_${Date.now()}`;
+            console.log('🆕 Started new chat with thread_id:', currentThreadId);
+
+            // Clear conversation state
+            conversationState = null;
+
+            // Clear messages and show welcome screen
+            messagesList.innerHTML = '';
+            messagesList.classList.add('hidden');
+            welcomeScreen.classList.remove('hidden');
+
+            // Reset generating state
+            isGenerating = false;
+            currentMessageId = null;
+        }
+
+        // ✅ NEW: Check if token is expired (optional - could decode JWT and check exp)
+        function checkTokenExpiry() {
+            // Simple check: if we get auth errors from server, logout
+            // More robust: decode JWT and check exp claim
+        }
 
         // DOM
         const input = document.getElementById('user-input');
@@ -723,7 +784,16 @@
                     break;
 
                 case 'error':
-                    showError(event.data.error);
+                    const errorMsg = event.data.error;
+                    showError(errorMsg);
+
+                    // ✅ NEW: Auto-logout on authentication errors
+                    if (errorMsg && (errorMsg.includes('Authentication') || errorMsg.includes('token') || errorMsg.includes('log in'))) {
+                        console.log('❌ Authentication error detected, logging out...');
+                        setTimeout(() => {
+                            logout();
+                        }, 2000); // Give user time to read error message
+                    }
                     break;
             }
         }
@@ -960,7 +1030,11 @@
             // Update with partial response (markdown parsed in real-time)
             if (partialResponse) {
                 try {
-                    contentEl.innerHTML = marked.parse(partialResponse);
+                    // ✅ Clean up excessive newlines before parsing markdown
+                    // Replace 3+ consecutive newlines with just 2 (double newline)
+                    const cleanedResponse = partialResponse.replace(/\n{3,}/g, '\n\n');
+
+                    contentEl.innerHTML = marked.parse(cleanedResponse);
 
                     // Highlight code blocks
                     contentEl.querySelectorAll('pre code').forEach((block) => {
@@ -992,7 +1066,11 @@
             if (!contentEl) return;
 
             contentEl.classList.remove('cursor');
-            contentEl.innerHTML = marked.parse(finalAnswer);
+
+            // ✅ Clean up excessive newlines before parsing markdown
+            const cleanedAnswer = finalAnswer.replace(/\n{3,}/g, '\n\n');
+
+            contentEl.innerHTML = marked.parse(cleanedAnswer);
 
             // Highlight code blocks
             contentEl.querySelectorAll('pre code').forEach((block) => {
@@ -1011,12 +1089,22 @@
                     // Render the mermaid diagram
                     const { svg } = await mermaid.render(diagramId, mermaidCode);
 
-                    // Replace the code block with the rendered SVG
+                    // Create container with copy button
                     const container = document.createElement('div');
-                    container.className = 'mermaid-diagram bg-[#1E1F20] p-4 rounded-lg border border-[#444746] my-4 overflow-x-auto';
+                    container.className = 'mermaid-diagram bg-[#1E1F20] p-4 rounded-lg border border-[#444746] my-4 overflow-x-auto relative group';
+
+                    // Add copy button (visible on hover)
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'absolute top-2 right-2 p-2 bg-gemini-bg hover:bg-gemini-hover rounded-lg transition-all opacity-0 group-hover:opacity-100 border border-gemini-border/50';
+                    copyBtn.title = 'Copy Mermaid code';
+                    copyBtn.innerHTML = '<i data-lucide="copy" class="w-4 h-4 text-gemini-text"></i>';
+                    copyBtn.onclick = () => copyMermaidCode(mermaidCode);
+
                     container.innerHTML = svg;
+                    container.appendChild(copyBtn);
 
                     pre.replaceWith(container);
+                    lucide.createIcons();
                 } catch (error) {
                     console.error('Mermaid rendering error:', error);
                     // Keep the code block if rendering fails
@@ -1082,12 +1170,18 @@
 
             if (metrics.length > 0) {
                 const footerEl = document.createElement('div');
-                footerEl.className = 'mt-4 pt-3 border-t border-gemini-border/30 flex items-center gap-4 text-xs text-gemini-subtext';
+                footerEl.className = 'mt-4 pt-3 border-t border-gemini-border/30 flex items-center justify-between gap-4 text-xs text-gemini-subtext';
                 footerEl.innerHTML = `
                     <div class="flex items-center gap-2">
                         <i data-lucide="zap" class="w-3 h-3"></i>
                         <span>${metrics.join(' • ')}</span>
                     </div>
+                    <button onclick="copyResponse(${currentMessageId})"
+                        class="flex items-center gap-1.5 px-3 py-1.5 hover:bg-gemini-hover rounded-lg transition-colors text-gemini-text"
+                        title="Copy response">
+                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                        <span>Copy</span>
+                    </button>
                 `;
                 contentEl.appendChild(footerEl);
                 lucide.createIcons();
@@ -1095,6 +1189,50 @@
             } else {
                 console.log('⚠️ No metrics to display');
             }
+        }
+
+        function copyResponse(msgId) {
+            const contentEl = document.getElementById(`content-${msgId}`);
+            if (!contentEl) return;
+
+            // Get the text content, excluding the footer
+            const clone = contentEl.cloneNode(true);
+            const footer = clone.querySelector('.border-t');
+            if (footer) footer.remove();
+
+            const text = clone.innerText;
+
+            navigator.clipboard.writeText(text).then(() => {
+                // Visual feedback
+                const btn = event.currentTarget;
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5"></i><span>Copied!</span>';
+                lucide.createIcons();
+
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    lucide.createIcons();
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+
+        function copyMermaidCode(code) {
+            navigator.clipboard.writeText(code).then(() => {
+                // Visual feedback
+                const btn = event.currentTarget;
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5"></i>';
+                lucide.createIcons();
+
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    lucide.createIcons();
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
         }
 
         function collapseThinking() {
@@ -1159,6 +1297,8 @@
             currentMessageId = null;
             isGenerating = false;
             conversationState = null;  // ✅ Reset conversation state
+            // Note: thread_id is now generated by server based on authenticated username
+            console.log('🆕 New conversation started');
             autoResize(input);
         }
 
@@ -1233,10 +1373,12 @@
             isGenerating = true;
             appendAssistantMessage(msgId);
 
-            // Send to server with conversation state and deep knowledge flag
-            const payload = { 
+            // Send to server with JWT token, thread_id, conversation state, and deep knowledge flag
+            const payload = {
                 query: text,
-                use_deep_knowledge: useDeepKnowledge  // ✅ Include deep knowledge flag
+                use_deep_knowledge: useDeepKnowledge,  // ✅ Include deep knowledge flag
+                token: jwtToken,  // ✅ JWT token for authentication
+                thread_id: currentThreadId  // ✅ Persistent thread_id for conversation memory
             };
 
             // ✅ Include previous state if OT conversation is active
@@ -1244,8 +1386,8 @@
                 payload.previous_state = conversationState;
                 console.log('📤 Sending with previous state:', conversationState.ot_conversation_active);
             }
-            
-            console.log('📤 Sending payload:', { ...payload, query: text.substring(0, 50) + '...' });
+
+            console.log('📤 Sending payload:', { ...payload, query: text.substring(0, 50) + '...', token: '***' });
 
             socket.send(JSON.stringify(payload));
         }
@@ -1350,7 +1492,7 @@
                     </div>
 
                     <!-- Response Content -->
-                    <div id="content-${msgId}" class="markdown-body w-full cursor">
+                    <div id="content-${msgId}" class="markdown-body w-full cursor min-h-0 flex-shrink-0">
                         <div class="flex gap-1 h-6 items-center">
                             <div class="w-2 h-2 bg-gemini-subtext rounded-full animate-bounce" style="animation-delay: 0ms"></div>
                             <div class="w-2 h-2 bg-gemini-subtext rounded-full animate-bounce" style="animation-delay: 150ms"></div>

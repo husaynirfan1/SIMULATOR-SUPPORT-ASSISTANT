@@ -15,11 +15,17 @@ import asyncio
 import json
 from datetime import datetime
 import uuid
+from jose import JWTError, jwt  # ✅ NEW: JWT validation for authentication
 
 from graph import MultiAgentSystem
 from optimizations.streaming.streaming_synthesis import stream_with_early_synthesis
+from langgraph.checkpoint.memory import InMemorySaver  # ✅ NEW: Memory for conversation context
 
 load_dotenv()
+
+# ✅ NEW: JWT Configuration (must match auth_server.py)
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "CHANGE_ME_SUPER_SECRET")
+ALGORITHM = "HS256"
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -47,6 +53,30 @@ if os.path.exists(ot_files_path):
 
 # Global system instance
 system: Optional[MultiAgentSystem] = None
+
+# ✅ NEW: Global memory checkpointer for conversation context
+memory_checkpointer: Optional[InMemorySaver] = None
+
+# ✅ NEW: JWT validation function
+def verify_jwt_token(token: str) -> Optional[str]:
+    """
+    Verify JWT token and extract username
+
+    Args:
+        token: JWT token string
+
+    Returns:
+        Username if token is valid, None otherwise
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if username is None:
+            return None
+        return username
+    except JWTError as e:
+        print(f"❌ JWT validation failed: {e}")
+        return None
 
 # Request/Response Models
 class QueryRequest(BaseModel):
@@ -123,7 +153,7 @@ class StreamingMultiAgentSystem:
     
     # Key fixes in StreamingMultiAgentSystem.query_with_streaming()
 
-    async def query_with_streaming(self, question: str, previous_state: Optional[Dict[str, Any]] = None, use_deep_knowledge: bool = False):
+    async def query_with_streaming(self, question: str, previous_state: Optional[Dict[str, Any]] = None, use_deep_knowledge: bool = False, config: Optional[Dict[str, Any]] = None):
         """
         Execute query with streaming events
 
@@ -131,6 +161,7 @@ class StreamingMultiAgentSystem:
             question: User query
             previous_state: Optional previous state for multi-turn conversations (e.g., OT form)
             use_deep_knowledge: Enable graph-based retrieval for deeper context (slower but more comprehensive)
+            config: Optional LangGraph config with thread_id for conversation memory
         """
 
         # ✅ NEW: Ensure event loop is set for graph callbacks
@@ -140,6 +171,7 @@ class StreamingMultiAgentSystem:
         # ✅ DEBUG: Log what streaming receives
         print(f"🎬 query_with_streaming received previous_state: {previous_state}")
         print(f"🧠 Deep Knowledge Mode: {'ENABLED' if use_deep_knowledge else 'DISABLED'}")
+        print(f"🧵 Config: {config}")
 
         # ✅ CHECK: If OT conversation is active, skip streaming's planning/consultation
         # and go straight to system.query() which handles OT multi-turn properly
@@ -353,10 +385,10 @@ class StreamingMultiAgentSystem:
         await self.emit_event("tool_check_start", {
             "message": "Checking if additional tools are needed..."
         })
-        
+
         # ✅ FIX: Execute full query but track what we've already shown
-        # ✅ NEW: Pass previous_state for multi-turn conversations and use_deep_knowledge flag
-        result = await asyncio.to_thread(self.system.query, question, previous_state, use_deep_knowledge)
+        # ✅ NEW: Pass previous_state for multi-turn conversations, use_deep_knowledge flag, and config for memory
+        result = await asyncio.to_thread(self.system.query, question, previous_state, use_deep_knowledge, config)
         
         # ✅ FIX: Properly emit tool events
         tools_used = result.get("tools_used", [])
@@ -532,22 +564,29 @@ class StreamingMultiAgentSystem:
 @app.on_event("startup")
 async def startup_event():
     """Initialize the multi-agent system on startup"""
-    global system
-    
+    global system, memory_checkpointer
+
     morphik_uri = os.getenv("MORPHIK_URI", "http://localhost:8000")
     openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
-    
+
     if not openrouter_api_key:
         raise ValueError("OPENROUTER_API_KEY environment variable is required")
-    
+
     try:
+        # Initialize InMemorySaver for conversation context
+        memory_checkpointer = InMemorySaver()
+        print(f"✓ InMemorySaver initialized for conversation context")
+
+        # Initialize MultiAgentSystem with checkpointer for memory
         system = MultiAgentSystem(
             morphik_uri=morphik_uri,
-            openrouter_api_key=openrouter_api_key
+            openrouter_api_key=openrouter_api_key,
+            checkpointer=memory_checkpointer  # ✅ NEW: Pass checkpointer for conversation memory
         )
         print(f"✓ Multi-Agent System initialized successfully")
         print(f"  - Morphik URI: {morphik_uri}")
         print(f"  - Model: {os.getenv('OPENROUTER_MODEL', 'x-ai/grok-4.1-fast:free')}")
+        print(f"  - Memory: InMemorySaver (conversation context enabled)")
     except Exception as e:
         print(f"✗ Failed to initialize system: {e}")
         raise
@@ -746,11 +785,45 @@ async def websocket_query(websocket: WebSocket):
             # Receive query from client
             data = await websocket.receive_json()
             query = data.get("query", "")
-            previous_state = data.get("previous_state")  # ✅ NEW: Get previous state for multi-turn
-            use_deep_knowledge = data.get("use_deep_knowledge", False)  # ✅ NEW: Get deep knowledge flag
+            previous_state = data.get("previous_state")  # ✅ Get previous state for multi-turn
+            use_deep_knowledge = data.get("use_deep_knowledge", False)  # ✅ Get deep knowledge flag
+            jwt_token = data.get("token")  # ✅ NEW: Get JWT token for authentication
+
+            # ✅ NEW: Validate JWT token and extract username
+            if not jwt_token:
+                await websocket.send_json({
+                    "event_type": "error",
+                    "data": {"error": "Authentication required. Please log in."}
+                })
+                await websocket.close()
+                return
+
+            username = verify_jwt_token(jwt_token)
+            if not username:
+                await websocket.send_json({
+                    "event_type": "error",
+                    "data": {"error": "Invalid or expired token. Please log in again."}
+                })
+                await websocket.close()
+                return
+
+            # ✅ NEW: Get thread_id from frontend (or fallback to generate one)
+            # Frontend sends persistent thread_id for conversation continuity
+            thread_id = data.get("thread_id")
+            if not thread_id:
+                # Fallback: generate thread_id if not provided
+                timestamp = int(time.time())
+                thread_id = f"thread_{username}_{timestamp}"
+                print(f"⚠️ No thread_id from frontend, generated: {thread_id}")
+
+            print(f"🔐 Authenticated user: {username}")
+            print(f"🧵 Using thread_id: {thread_id}")
 
             # ✅ DEBUG: Log what WebSocket receives
             print(f"🌐 WebSocket received data keys: {data.keys()}")
+            print(f"   query: {query[:50]}...")
+            print(f"   username: {username}")
+            print(f"   thread_id: {thread_id}")
             print(f"   previous_state: {previous_state}")
             print(f"   use_deep_knowledge: {use_deep_knowledge}")
 
@@ -761,12 +834,16 @@ async def websocket_query(websocket: WebSocket):
                 })
                 continue
 
+            # ✅ NEW: Create LangGraph config with thread_id for memory isolation
+            config = {"configurable": {"thread_id": thread_id}}
+            print(f"🧵 Using thread_id for conversation context: {thread_id}")
+
             # Create streaming system
             streaming_system = StreamingMultiAgentSystem(system)
 
-            # Start query execution with previous state and deep knowledge flag
+            # Start query execution with previous state, deep knowledge flag, and memory config
             query_task = asyncio.create_task(
-                streaming_system.query_with_streaming(query, previous_state, use_deep_knowledge)
+                streaming_system.query_with_streaming(query, previous_state, use_deep_knowledge, config)
             )
             
             # Stream events to client

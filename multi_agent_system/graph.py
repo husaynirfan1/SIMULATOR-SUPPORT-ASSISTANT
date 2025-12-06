@@ -57,6 +57,7 @@ class AgentState(TypedDict):
     ot_conversation_active: bool  # ✅ NEW: Is OT conversation active?
     is_general_query: bool  # ✅ NEW: Flag for general queries
     use_deep_knowledge: bool  # ✅ NEW: Enable graph-based retrieval for deeper context
+    skip_tool_check: bool  # ✅ NEW: Flag from Planning Agent to skip tool checking
 
 class MultiAgentSystem:
     """Advanced LangGraph-based multi-agent orchestration system with tool calling"""
@@ -71,7 +72,8 @@ class MultiAgentSystem:
         openrouter_base_url: str = "https://api.deepseek.com/v1", # now using deepseek
         enable_cache: bool = True,  # ✅ NEW: Enable response caching
         cache_ttl: int = 3600,  # ✅ NEW: Cache TTL in seconds (1 hour default)
-        cache_size: int = 100  # ✅ NEW: Maximum cache entries
+        cache_size: int = 100,  # ✅ NEW: Maximum cache entries
+        checkpointer = None  # ✅ NEW: LangGraph checkpointer for conversation memory
     ):
         """
         Initialize the multi-agent system
@@ -84,10 +86,14 @@ class MultiAgentSystem:
             enable_cache: Enable response caching for frequently asked questions
             cache_ttl: Cache time-to-live in seconds
             cache_size: Maximum number of cached responses
+            checkpointer: LangGraph checkpointer for conversation memory (e.g., InMemorySaver)
         """
         self.morphik_uri = morphik_uri
         self.event_callback = None  # ✅ NEW: Callback for streaming events
         self.event_loop = None  # ✅ NEW: Store reference to event loop
+
+        # ✅ NEW: Store checkpointer for conversation memory
+        self.checkpointer = checkpointer
 
         # ✅ NEW: Initialize cache if enabled
         self.cache_enabled = enable_cache
@@ -158,31 +164,36 @@ class MultiAgentSystem:
     def _build_graph(self) -> StateGraph:
         """Build the advanced LangGraph workflow with tool calling"""
         workflow = StateGraph(AgentState)
-        
+
         # Define nodes
         workflow.add_node("plan", self._planning_node)
         workflow.add_node("handle_general", self._handle_general_query_node)  # ✅ NEW: Handle general queries
+        workflow.add_node("handle_dr_only", self._handle_dr_only_node)  # ✅ NEW: Handle DR-only queries
         workflow.add_node("consult_specialists", self._consult_specialists_node)
         workflow.add_node("check_tools", self._check_tools_node)
         workflow.add_node("execute_tools", self._execute_tools_node)
         workflow.add_node("redteam_review", self._redteam_node)
         workflow.add_node("synthesize", self._synthesize_node)
-        
+
         # Define edges
         workflow.set_entry_point("plan")
-        
-        # ✅ NEW: After planning, check if it's a general query
+
+        # ✅ NEW: After planning, check query type
         workflow.add_conditional_edges(
             "plan",
-            self._is_general_query,
+            self._route_after_planning,
             {
-                "general": "handle_general",  # Skip to general handler
-                "specialist": "consult_specialists"  # Normal flow
+                "general": "handle_general",  # Simple general queries
+                "dr_only": "handle_dr_only",  # DR-only queries (skip specialists)
+                "specialist": "consult_specialists"  # Normal specialist flow
             }
         )
-        
+
         # ✅ NEW: General queries go straight to END (skip synthesis)
         workflow.add_edge("handle_general", END)
+
+        # ✅ NEW: DR-only queries go straight to synthesis
+        workflow.add_edge("handle_dr_only", "synthesize")
         
         workflow.add_edge("consult_specialists", "check_tools")
         
@@ -216,8 +227,9 @@ class MultiAgentSystem:
         )
         
         workflow.add_edge("synthesize", END)
-        
-        return workflow.compile()
+
+        # ✅ NEW: Compile with checkpointer for conversation memory
+        return workflow.compile(checkpointer=self.checkpointer) if self.checkpointer else workflow.compile()
 
     def _check_dr_loop(self, state: AgentState) -> Literal["replan", "continue"]:
         """Check if we should loop back to planning with DR context"""
@@ -249,12 +261,17 @@ class MultiAgentSystem:
         elif self.event_callback and not self.event_loop:
                 print(f"⚠️ No event loop available for {event_type}")
     
-    def _is_general_query(self, state: AgentState) -> Literal["general", "specialist"]:
-        """Check if this is a general query that doesn't need specialists"""
+    def _route_after_planning(self, state: AgentState) -> Literal["general", "dr_only", "specialist"]:
+        """Route query after planning based on type"""
+        # ✅ Check if this is a DR-only query
+        if state.get("is_dr_only_query", False):
+            print("🔍 Routing to DR-only handler (skip specialists)")
+            return "dr_only"
+
         # Check if planning agent marked this as general
         if state.get("is_general_query", False):
             return "general"
-        
+
         # Check if no specialists were selected
         if not state.get("agents_to_consult") or len(state.get("agents_to_consult", [])) == 0:
             # But not if it's an OT form request (those go through tools)
@@ -262,29 +279,106 @@ class MultiAgentSystem:
             ot_keywords = ["overtime", "ot form", "fill form", "create form"]
             if not any(kw in query_lower for kw in ot_keywords):
                 return "general"
-        
+
         return "specialist"
     
     def _handle_general_query_node(self, state: AgentState) -> AgentState:
         """Handle general queries directly without specialist consultation"""
         print(f"💬 Handling general query directly")
-        
+
         # Use general agent to answer
         answer = self.general_agent.answer_query(state["query"])
-        
+
         # Format as agent response for consistency
         general_response = {
             "agent": "General Agent",
             "answer": answer,
             "sources": []
         }
-        
+
         return {
             **state,
             "agent_responses": [general_response],
             "final_answer": answer,  # Set directly since we're skipping synthesis
             "current_step": "general_query_handled"
         }
+
+    def _handle_dr_only_node(self, state: AgentState) -> AgentState:
+        """Handle DR-only queries by directly executing DR search tool"""
+        print(f"🔍 Executing DR-only search")
+
+        # ✅ Emit tool check events for UI
+        self._emit_sync("tool_check_start", {})
+        self._emit_sync("tool_check_complete", {
+            "tools_needed": ["search_deficiency_records"]
+        })
+
+        # ✅ Emit tool start event
+        self._emit_sync("tool_start", {
+            "tool": "search_deficiency_records",
+            "query": state["query"]
+        })
+
+        # Execute DR search
+        from multi_agent_system.agent_tools import search_deficiency_records
+
+        # Extract search query - use the full query
+        search_query = state["query"]
+
+        try:
+            # Execute DR search tool
+            dr_result = search_deficiency_records.invoke({"query": search_query})
+
+            # ✅ Emit tool complete event
+            results_count = len(dr_result.get("results", []))
+            preview = f"Found {results_count} deficiency records"
+
+            self._emit_sync("tool_complete", {
+                "tool": "search_deficiency_records",
+                "preview": preview,
+                "result_count": results_count
+            })
+
+            # ✅ Emit tools execution complete event for UI
+            self._emit_sync("tools_execution_complete", {
+                "message": "DR search complete"
+            })
+
+            # Format as tool response for synthesis
+            tool_response = {
+                "tool": "search_deficiency_records",
+                "result": dr_result,
+                "answer": dr_result.get("answer", ""),
+                "results_count": results_count
+            }
+
+            print(f"✅ DR search complete: {results_count} records found")
+
+            return {
+                **state,
+                "tool_responses": [tool_response],
+                "agent_responses": [],  # No specialist responses
+                "current_step": "dr_search_complete",
+                "tools_called": ["search_deficiency_records"]
+            }
+
+        except Exception as e:
+            print(f"❌ DR search failed: {e}")
+
+            # Return error state
+            error_response = {
+                "tool": "search_deficiency_records",
+                "error": str(e),
+                "answer": f"Error searching deficiency records: {str(e)}"
+            }
+
+            return {
+                **state,
+                "tool_responses": [error_response],
+                "agent_responses": [],
+                "current_step": "dr_search_failed",
+                "tools_called": ["search_deficiency_records"]
+            }
     
     def _planning_node(self, state: AgentState) -> AgentState:
         """Planning agent determines which specialists to consult"""
@@ -300,7 +394,7 @@ class MultiAgentSystem:
 
         print(f"🔍 Planning: query='{state['query'][:50]}...', ot_requested={ot_form_requested}, ot_active={ot_conversation_active}, is_replan={is_replan}")
 
-        # If OT form conversation, skip specialist consultation and go straight to tools
+        # ✅ If OT form conversation, skip specialist consultation and go straight to tools
         if ot_form_requested or ot_conversation_active:
             print(f"📝 OT form detected in planning - routing to tool check (requested={ot_form_requested}, active={ot_conversation_active})")
             return {
@@ -315,11 +409,52 @@ class MultiAgentSystem:
                 "ot_conversation_active": state.get("ot_conversation_active", False)  # ✅ PRESERVE active flag
             }
 
-        # ✅ Use route_query_with_reasoning to get exact number of specialists needed
+        # ✅ Use route_query_with_reasoning to get query classification and specialists
         if hasattr(self.planning_agent, 'route_query_with_reasoning'):
             planning_result = self.planning_agent.route_query_with_reasoning(state["query"])
+            query_type = planning_result.get("query_type", "specialist")  # ✅ Get LLM's classification
             agents_to_consult = planning_result.get("agents", [])
             num_specialists = planning_result.get("num_specialists", len(agents_to_consult))
+            reasoning = planning_result.get("reasoning", "")
+
+            # ✅ NEW: Extract tool decision from Planning Agent (DeepSeek reasoning model)
+            tools_needed_flag = planning_result.get("tools_needed", True)  # Default to True if not provided
+            print(f"   Tools Needed (from Planning): {tools_needed_flag}")
+
+            # ✅ DEBUG: Log planning result
+            print(f"📋 Planning Result:")
+            print(f"   Query Type: {query_type}")
+            print(f"   Agents: {agents_to_consult}")
+            print(f"   Num Specialists: {num_specialists}")
+            print(f"   Reasoning: {reasoning[:100]}...")
+
+            # ✅ Check if LLM determined this is a GENERAL query (highest priority - no specialists/tools)
+            if query_type == "general":
+                print(f"💬 Planning Agent classified as GENERAL query - skipping specialists and tools")
+                return {
+                    **state,
+                    "agents_to_consult": [],
+                    "num_specialists_to_consult": 0,
+                    "require_redteam": False,
+                    "is_general_query": True,  # ✅ Mark as general - will route directly to general handler
+                    "current_step": "general_routing",
+                    "messages": [HumanMessage(content=state["query"])],
+                    "tools_called": state.get("tools_called", [])
+                }
+
+            # ✅ Check if LLM determined this is a DR-only query
+            if query_type == "dr_only":
+                print(f"🔍 Planning Agent classified as DR-only query - skipping specialists")
+                return {
+                    **state,
+                    "agents_to_consult": [],
+                    "num_specialists_to_consult": 0,
+                    "require_redteam": False,
+                    "is_dr_only_query": True,  # ✅ Mark as DR-only
+                    "current_step": "dr_only_routing",
+                    "messages": [HumanMessage(content=state["query"])],
+                    "tools_called": state.get("tools_called", [])
+                }
         else:
             agents_to_consult = self.planning_agent.route_query(state["query"])
             num_specialists = len(agents_to_consult)
@@ -365,6 +500,12 @@ class MultiAgentSystem:
 
         # ✅ NEW: Check if this is a general query (no specialists needed)
         is_general = len(agents_to_consult) == 0 and not ot_form_requested and not ot_conversation_active
+
+        # ✅ NEW: Determine if tool check should be skipped based on Planning Agent's EXPLICIT decision
+        # Trust the Planning Agent's reasoning (DeepSeek model) instead of keywords
+        skip_tools = not tools_needed_flag if 'tools_needed_flag' in locals() else False
+
+        print(f"🎯 Planning complete: skip_tool_check={skip_tools}, tools_needed_flag={tools_needed_flag if 'tools_needed_flag' in locals() else 'NOT SET'}")
         
         return {
             **state,
@@ -374,7 +515,8 @@ class MultiAgentSystem:
             "current_step": "consulting_specialists",
             "messages": [HumanMessage(content=state["query"])],
             "tools_called": tools_called,
-            "is_general_query": is_general  # ✅ NEW: Mark general queries
+            "is_general_query": is_general,  # ✅ NEW: Mark general queries
+            "skip_tool_check": skip_tools  # ✅ NEW: Follow Planning Agent's EXPLICIT tool decision
         }
         
     def _consult_specialists_node(self, state: AgentState) -> AgentState:
@@ -467,9 +609,36 @@ class MultiAgentSystem:
     def _check_tools_node(self, state: AgentState) -> AgentState:
         """Use LLM to determine if tools (DR, Inventory, Mermaid, OT Form) are needed"""
 
-        # ✅ If we're in a replan loop, skip tool checking
+        # ✅ Emit tool check start event
+        self._emit_sync("tool_check_start", {})
+
+        # ✅✅ CRITICAL FIX: Check Planning Agent's EXPLICIT decision FIRST (before any other logic)
+        if state.get("skip_tool_check", False):
+            print("⚡ FAST PATH: Planning Agent said NO TOOLS NEEDED - skipping tool check entirely")
+            dummy_response = AIMessage(content="Planning Agent determined no tools are needed.")
+            self._emit_sync("tool_check_complete", {"tools_needed": []})
+            return {
+                **state,
+                "messages": [dummy_response],
+                "current_step": "tools_checked"
+            }
+
+        # ✅✅ SECOND CHECK: If planning agent said general query, skip immediately
+        if state.get("is_general_query", False):
+            print("⚡ FAST PATH: General query requires no tools")
+            dummy_response = AIMessage(content="No tools needed for general query.")
+            self._emit_sync("tool_check_complete", {"tools_needed": []})
+            return {
+                **state,
+                "messages": [dummy_response],
+                "current_step": "tools_checked"
+            }
+
+        # ✅✅ THIRD CHECK: If we're in a replan loop, skip tool checking
         if state.get("dr_replan_triggered"):
+            print("⚡ FAST PATH: Replan loop - skipping additional tool calls")
             dummy_response = AIMessage(content="Proceeding without additional tool calls.")
+            self._emit_sync("tool_check_complete", {"tools_needed": []})
             return {
                 **state,
                 "messages": [dummy_response],
@@ -477,12 +646,11 @@ class MultiAgentSystem:
                 "dr_replan_triggered": False
             }
 
-        # ✅ Check which tools have ALREADY been called
+        # NOW check which tools have already been called
         tools_called = state.get("tools_called", [])
-
         print(f"🔍 Tools already called: {tools_called}")
 
-        # ✅ Check if we're in an active OT conversation
+        # Check if we're in an active OT conversation
         ot_conversation_active = state.get("ot_conversation_active", False)
         query_lower = state["query"].lower()
 
@@ -493,8 +661,7 @@ class MultiAgentSystem:
         # Start or continue OT conversation
         if ot_form_requested or ot_conversation_active:
             print(f"📝 OT form conversation: requested={ot_form_requested}, active={ot_conversation_active}")
-            print(f"   State exists: {state.get('ot_conversation_state') is not None}")
-
+            
             # Load conversation state if exists
             if state.get("ot_conversation_state"):
                 print(f"   Loading state: {state['ot_conversation_state'].get('state', 'unknown')}")
@@ -503,16 +670,11 @@ class MultiAgentSystem:
                 print(f"   ⚠️ No state to load - starting fresh")
 
             # Process user input
-            print(f"   Processing: '{state['query'][:50]}...'")
             result = self.ot_conversation_manager.process_user_input(state["query"])
-            print(f"   Result: status={result.get('status')}, ready={result.get('ready_for_tool')}")
-
             response = AIMessage(content=result["message"])
 
             # Check if ready to call the tool
             if result.get("ready_for_tool", False):
-                # Create a tool call for fill_overtime_form
-                # NOTE: Don't add to tools_called yet - that happens in execute_tools_node
                 tool_call = {
                     "name": "fill_overtime_form",
                     "args": {"ot_data_json": result["tool_data"]},
@@ -520,16 +682,18 @@ class MultiAgentSystem:
                 }
                 response.tool_calls = [tool_call]
 
+                self._emit_sync("tool_check_complete", {"tools_needed": ["fill_overtime_form"]})
                 return {
                     **state,
                     "messages": [response],
                     "current_step": "tools_checked",
                     "ot_conversation_active": False,
                     "ot_conversation_state": None,
-                    "tools_called": tools_called  # Don't modify - let execute_tools_node handle it
+                    "tools_called": tools_called
                 }
             else:
                 # Continue conversation - save state
+                self._emit_sync("tool_check_complete", {"tools_needed": []})
                 return {
                     **state,
                     "messages": [response],
@@ -539,52 +703,92 @@ class MultiAgentSystem:
                     "tools_called": tools_called
                 }
 
-        # ✅ Regular tool checking for other tools
+        # Check remaining tools
         all_tools = ["search_deficiency_records", "search_inventory", "create_diagram", "fill_overtime_form"]
         remaining_tools = [t for t in all_tools if t not in tools_called]
 
         if not remaining_tools:
             print("⚠️ All tools already called - skipping tool check")
             dummy_response = AIMessage(content="All available tools have been consulted.")
+            self._emit_sync("tool_check_complete", {"tools_needed": []})
             return {
                 **state,
                 "messages": [dummy_response],
                 "current_step": "tools_checked"
             }
+
+        # ✅ FALLBACK: Strong DR keyword check (before expensive LLM call)
+        dr_keywords = ["dr", "deficiency", "defect", "deficiency record", "find dr", "search dr", "show dr"]
+        looks_like_dr_query = any(keyword in query_lower for keyword in dr_keywords)
         
-        # ✅ OPTIMIZATION: Decide tools based ONLY on user query (not specialist responses)
-        # This is faster and more aligned with user intent
+        if looks_like_dr_query and "search_deficiency_records" in remaining_tools:
+            print("🔍 FALLBACK: Query contains DR keywords - forcing DR tool call")
+            tool_call = {
+                "name": "search_deficiency_records",
+                "args": {"query": state["query"]},
+                "id": f"call_dr_fallback_{int(time.time())}"
+            }
+            response = AIMessage(content="Searching deficiency records based on query keywords.")
+            response.tool_calls = [tool_call]
+
+            self._emit_sync("tool_check_complete", {"tools_needed": ["search_deficiency_records"]})
+            return {
+                **state,
+                "messages": [response],
+                "current_step": "tools_checked"
+            }
+
+        # ✅ Fast heuristic check for ANY tool keywords
+        needs_llm_check = False
+        inventory_keywords = ["inventory", "part", "component", "stock", "part number"]
+        diagram_keywords = ["diagram", "visualize", "flow", "draw", "chart", "flowchart", "show"]
+
+        if any(kw in query_lower for kw in dr_keywords):
+            needs_llm_check = True
+        elif any(kw in query_lower for kw in inventory_keywords):
+            needs_llm_check = True
+        elif any(kw in query_lower for kw in diagram_keywords):
+            needs_llm_check = True
+
+        # ✅✅ OPTIMIZATION: If no tool keywords AND Planning Agent didn't flag tools, skip LLM entirely
+        if not needs_llm_check:
+            print(f"⚡ FAST PATH: No tool keywords detected and Planning Agent didn't flag tools - skipping LLM call")
+            dummy_response = AIMessage(content="No tools needed based on query analysis.")
+            self._emit_sync("tool_check_complete", {"tools_needed": []})
+            return {
+                **state,
+                "messages": [dummy_response],
+                "current_step": "tools_checked"
+            }
+
+        # Only now do we call the LLM (if we really need to)
+        print(f"🔧 LLM deciding on tools (remaining: {remaining_tools})")
+        
         tool_check_prompt = f"""User Query: {state["query"]}
 
-Available Tools:
-- search_deficiency_records: Search for known bugs, issues, and deficiency reports. Use when user asks about problems, DRs, failures, or known issues.
-- search_inventory: Look up parts, components, and stock availability. Use when user asks about part numbers, inventory, or components.
-- create_diagram: Generate Mermaid diagrams for visualization. Use when user explicitly asks to "create diagram", "visualize", "show flow", "draw", "generate chart", or "make flowchart".
-- fill_overtime_form: Create and fill overtime forms. Use when user wants to create or fill OT forms.
+    Available Tools:
+    - search_deficiency_records: Search for deficiency records (DR), known bugs, issues, defects, and problems.
+    - search_inventory: Look up parts, components, and stock availability.
+    - create_diagram: Generate Mermaid diagrams for visualization.
+    - fill_overtime_form: Create and fill overtime forms.
 
-Based on the user's query, should any tool be called? Call ONLY ONE if needed."""
+    Based on the user's query, which tool (if any) should be called? Call ONLY ONE tool if needed."""
 
         messages = state["messages"] + [HumanMessage(content=tool_check_prompt)]
 
-        # ✅ Create a filtered tool list
-        filtered_tools = [
-            tool for tool in AVAILABLE_TOOLS
-            if tool.name in remaining_tools
-        ]
+        # Create filtered tool list
+        filtered_tools = [tool for tool in AVAILABLE_TOOLS if tool.name in remaining_tools]
 
         if not filtered_tools:
             dummy_response = AIMessage(content="No additional tools available.")
+            self._emit_sync("tool_check_complete", {"tools_needed": []})
             return {
                 **state,
                 "messages": [dummy_response],
                 "current_step": "tools_checked"
             }
 
-        # ✅ OPTIMIZATION: Use temperature=0 for faster, more deterministic decisions
-        print(f"🔧 LLM deciding on tools based on user query (remaining: {remaining_tools})")
-        print(f"📝 Tool check prompt:\n{tool_check_prompt}")
-
-        # Lower temperature = faster, more focused decisions
+        # Use temperature=0 for faster decisions
         fast_llm = self.base_llm.with_config({"temperature": 0.0})
         temp_llm = fast_llm.bind_tools(filtered_tools)
 
@@ -593,19 +797,22 @@ Based on the user's query, should any tool be called? Call ONLY ONE if needed.""
         except Exception as e:
             print(f"⚠️ Tool check LLM call failed: {e}")
             dummy_response = AIMessage(content="Tool check skipped due to error.")
+            self._emit_sync("tool_check_complete", {"tools_needed": []})
             return {
                 **state,
                 "messages": [dummy_response],
                 "current_step": "tools_checked"
             }
-        
-        print(f"🤖 LLM response has {len(response.tool_calls) if hasattr(response, 'tool_calls') and response.tool_calls else 0} tool calls")
+
+        # Extract tools_needed for event
+        tools_needed = []
         if hasattr(response, 'tool_calls') and response.tool_calls:
             for tc in response.tool_calls:
-                print(f"   Tool selected: {tc.get('name', 'unknown')}")
-        else:
-            print(f"   No tools selected. Response content: {response.content[:200] if hasattr(response, 'content') else 'N/A'}")
-        
+                tool_name = tc.get('name', 'unknown')
+                tools_needed.append(tool_name)
+                print(f"   Tool selected: {tool_name}")
+
+        self._emit_sync("tool_check_complete", {"tools_needed": tools_needed})
         return {
             **state,
             "messages": [response],
@@ -823,36 +1030,79 @@ Based on the user's query, should any tool be called? Call ONLY ONE if needed.""
         specialist_context = ""
         MAX_RESPONSE_LENGTH = 3000  # Max chars per response
         MAX_TOTAL_LENGTH = 50000    # Max total context length
-        
-        for i, resp in enumerate(all_responses):
-            if isinstance(resp, dict) and "agent" in resp:
-                agent_name = resp['agent']
-                answer = resp.get('answer', '')
-                
-                # ✅ Truncate individual response if too long
-                if len(answer) > MAX_RESPONSE_LENGTH:
-                    answer = answer[:MAX_RESPONSE_LENGTH] + f"\n\n[... truncated {len(answer) - MAX_RESPONSE_LENGTH} chars for brevity ...]"
-                
-                specialist_context += f"\n--- Source: {agent_name} ---\n{answer}\n"
 
-                # If this is a DR tool response with results, include the details (with limits)
-                if resp.get('results') and agent_name == 'DR Agent':
-                    specialist_context += "\nDeficiency Record Details:\n"
-                    # ✅ Limit to first 5 DR records to avoid overflow
-                    for idx, dr in enumerate(resp['results'][:5], 1):
-                        specialist_context += f"\n{idx}. DR#{dr.get('DeficiencyNumber', 'N/A')}"
-                        specialist_context += f"\n   Issue: {dr.get('Issue Description', 'N/A')}"
-                        specialist_context += f"\n   System: {dr.get('System', 'N/A')}"
-                        specialist_context += f"\n   Status: {dr.get('Status', 'N/A')}"
-                        specialist_context += f"\n   Resource: {dr.get('Resource', 'N/A')}"
-                        if dr.get('ActionTaken'):
-                            action_preview = str(dr['ActionTaken'])[:200] + "..." if len(str(dr.get('ActionTaken', ''))) > 200 else str(dr.get('ActionTaken', ''))
-                            specialist_context += f"\n   Action Taken: {action_preview}"
-                        specialist_context += "\n"
-                    
-                    # Show count if more records exist
-                    if len(resp['results']) > 5:
-                        specialist_context += f"\n... and {len(resp['results']) - 5} more records\n"
+        for i, resp in enumerate(all_responses):
+            if isinstance(resp, dict):
+                # ✅ Handle both agent responses and tool responses
+                if "agent" in resp:
+                    # Specialist agent response
+                    agent_name = resp['agent']
+                    answer = resp.get('answer', '')
+
+                    # ✅ Truncate individual response if too long
+                    if len(answer) > MAX_RESPONSE_LENGTH:
+                        answer = answer[:MAX_RESPONSE_LENGTH] + f"\n\n[... truncated {len(answer) - MAX_RESPONSE_LENGTH} chars for brevity ...]"
+
+                    specialist_context += f"\n--- Source: {agent_name} ---\n{answer}\n"
+
+                    # If this is a DR tool response with results, include the details (with limits)
+                    if resp.get('results') and agent_name == 'DR Agent':
+                        specialist_context += "\nDeficiency Record Details:\n"
+                        # ✅ Limit to first 5 DR records to avoid overflow
+                        for idx, dr in enumerate(resp['results'][:5], 1):
+                            specialist_context += f"\n{idx}. DR#{dr.get('DeficiencyNumber', 'N/A')}"
+                            specialist_context += f"\n   Issue: {dr.get('Issue Description', 'N/A')}"
+                            specialist_context += f"\n   System: {dr.get('System', 'N/A')}"
+                            specialist_context += f"\n   Status: {dr.get('Status', 'N/A')}"
+                            specialist_context += f"\n   Resource: {dr.get('Resource', 'N/A')}"
+                            if dr.get('ActionTaken'):
+                                action_preview = str(dr['ActionTaken'])[:200] + "..." if len(str(dr.get('ActionTaken', ''))) > 200 else str(dr.get('ActionTaken', ''))
+                                specialist_context += f"\n   Action Taken: {action_preview}"
+                            specialist_context += "\n"
+
+                        # Show count if more records exist
+                        if len(resp['results']) > 5:
+                            specialist_context += f"\n... and {len(resp['results']) - 5} more records\n"
+
+                elif "tool" in resp:
+                    # ✅ Tool response (DR search, inventory, etc.)
+                    tool_name = resp['tool']
+                    result = resp.get('result', {})
+
+                    # Get answer from result
+                    answer = result.get('answer', resp.get('answer', ''))
+
+                    # ✅ Truncate if too long
+                    if len(answer) > MAX_RESPONSE_LENGTH:
+                        answer = answer[:MAX_RESPONSE_LENGTH] + f"\n\n[... truncated {len(answer) - MAX_RESPONSE_LENGTH} chars for brevity ...]"
+
+                    specialist_context += f"\n--- Tool: {tool_name} ---\n{answer}\n"
+
+                    # ✅ Include DR details if this is a DR search tool
+                    if tool_name == "search_deficiency_records" and result.get('results'):
+                        specialist_context += "\nDeficiency Record Details:\n"
+                        # ✅ Limit to first 5 DR records
+                        for idx, dr in enumerate(result['results'][:5], 1):
+                            specialist_context += f"\n{idx}. DR#{dr.get('DeficiencyNumber', 'N/A')}"
+                            specialist_context += f"\n   Issue: {dr.get('Issue Description', 'N/A')}"
+                            specialist_context += f"\n   System: {dr.get('System', 'N/A')}"
+                            specialist_context += f"\n   Status: {dr.get('Status', 'N/A')}"
+                            specialist_context += f"\n   Resource: {dr.get('Resource', 'N/A')}"
+                            if dr.get('ActionTaken'):
+                                action_preview = str(dr['ActionTaken'])[:200] + "..." if len(str(dr.get('ActionTaken', ''))) > 200 else str(dr.get('ActionTaken', ''))
+                                specialist_context += f"\n   Action Taken: {action_preview}"
+                            specialist_context += "\n"
+
+                        # Show count if more records exist
+                        if len(result['results']) > 5:
+                            specialist_context += f"\n... and {len(result['results']) - 5} more records\n"
+
+                else:
+                    # Unknown response format
+                    resp_str = str(resp)
+                    if len(resp_str) > MAX_RESPONSE_LENGTH:
+                        resp_str = resp_str[:MAX_RESPONSE_LENGTH] + "\n[... truncated ...]"
+                    specialist_context += f"\n--- Source: Unknown ---\n{resp_str}\n"
             else:
                 # Truncate other responses too
                 resp_str = str(resp)
@@ -921,7 +1171,7 @@ Please provide the final synthesized response:
             if hasattr(chunk, 'content') and chunk.content:
                 yield chunk.content
     
-    def query(self, question: str, previous_state: Optional[Dict[str, Any]] = None, use_deep_knowledge: bool = False) -> Dict[str, Any]:
+    def query(self, question: str, previous_state: Optional[Dict[str, Any]] = None, use_deep_knowledge: bool = False, config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Process a query through the multi-agent system
 
@@ -929,6 +1179,7 @@ Please provide the final synthesized response:
             question: User query
             previous_state: Optional previous state (for continuing OT conversations)
             use_deep_knowledge: Enable graph-based retrieval for deeper context (slower but more comprehensive)
+            config: Optional LangGraph config with thread_id for conversation memory
         """
         # ✅ NEW: Check cache first (skip for OT conversations)
         if self.cache_enabled and not previous_state:
@@ -947,8 +1198,9 @@ Please provide the final synthesized response:
         if previous_state:
             print(f"   Keys: {previous_state.keys()}")
             print(f"   ot_conversation_active: {previous_state.get('ot_conversation_active')}")
-        
+
         print(f"🧠 Deep Knowledge Mode: {'ENABLED' if use_deep_knowledge else 'DISABLED'}")
+        print(f"🧵 Memory Config: {config}")
 
         initial_state = AgentState(
             query=question,
@@ -968,9 +1220,10 @@ Please provide the final synthesized response:
             is_general_query=False,  # ✅ NEW: Initialize general query flag
             use_deep_knowledge=use_deep_knowledge  # ✅ NEW: Pass deep knowledge flag
         )
-        
-        # Run the graph
-        result = self.graph.invoke(initial_state)
+
+        # Run the graph with memory config
+        # ✅ NEW: Pass config to enable conversation memory via thread_id
+        result = self.graph.invoke(initial_state, config=config) if config else self.graph.invoke(initial_state)
 
         # Extract agent and tool names
         agents_consulted = [r["agent"] for r in result["agent_responses"]]

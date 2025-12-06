@@ -4,6 +4,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
+import sys
 
 # ------------------------------
 # JWT CONFIG
@@ -48,6 +49,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ------------------------------
+# Health Check / Root Endpoint
+# ------------------------------
+@app.get("/")
+def root():
+    return {"status": "ok", "service": "Auth Server", "version": "1.0"}
+
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
 
 # ------------------------------
 # Helper Functions
@@ -98,3 +110,22 @@ def protected(token: str = Depends(oauth2_scheme)):
         return {"message": f"Hello {username}"}
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+# ------------------------------
+# Startup Event
+# ------------------------------
+@app.on_event("startup")
+async def startup():
+    print("=" * 50)
+    print("🔐 Auth Server Starting...")
+    print(f"   Users configured: {list(users_db.keys())}")
+    print(f"   Token expiry: {ACCESS_TOKEN_EXPIRE_MINUTES} minutes")
+    print(f"   CORS: Enabled (allow all origins)")
+    print("=" * 50)
+
+# ------------------------------
+# Run with uvicorn
+# ------------------------------
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=3221)
